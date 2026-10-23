@@ -1,0 +1,182 @@
+{
+  "schema": 1,
+  "_about": "已知的 mod 目录。status=authored 表示 mods/<id>/mod.json 已写好、可直接装；status=candidate 表示只是登记了来源，要装得先跑 mod.py add。purpose 分 plot（出图）/ analysis（只产分析结果）/ both；缺省 plot。这份文件可分享（进 zip），不含任何机器本地路径。",
+  "catalog": [
+    {
+      "id": "ggpubfigs",
+      "name": "ggpubfigs",
+      "summary": "色盲友好配色 + ggplot2 期刊主题扩展",
+      "type": "rgh",
+      "env": "r",
+      "purpose": "plot",
+      "status": "authored",
+      "source": {
+        "kind": "github",
+        "url": "https://github.com/JLSteenwyk/ggpubfigs",
+        "ref": "v1.1.4"
+      },
+      "license": "MIT",
+      "size_kb": 11596,
+      "note": "不在 CRAN。仓库 11.6 MB 但包本体只有 27 KB，稀疏拉取只取后者。"
+    },
+    {
+      "id": "icarus-figures",
+      "name": "Icarus-Figures",
+      "summary": "顶刊风格 Python 绘图库（包名 paperfig），约 50 个图型函数",
+      "type": "pysrc",
+      "env": "omicverse",
+      "purpose": "plot",
+      "status": "authored",
+      "source": {
+        "kind": "github",
+        "url": "https://github.com/TAO-QKV/Icarus-Figures",
+        "ref": "按 commit SHA 钉版（仓库无 tag）"
+      },
+      "license": "MIT",
+      "size_kb": 14369,
+      "note": "PyPI 上的 paperfig 是别的项目（sekika/paperfig），只能走源码安装。"
+    },
+    {
+      "id": "sci-figure",
+      "name": "sci-figure",
+      "summary": "SCI / Elsevier 风格的 8 个图型脚本模板 + 期刊 rcParams 配方 + 出图 QA 清单",
+      "type": "snippets",
+      "env": null,
+      "purpose": "plot",
+      "status": "authored",
+      "source": {
+        "kind": "github",
+        "url": "https://github.com/xiao-yuling/sci-figure",
+        "ref": "按 commit SHA 钉版（仓库无 tag）"
+      },
+      "license": "MIT",
+      "size_kb": 576,
+      "note": "原仓库是一个 Claude skill；这里只取它的 examples/ 与 references/ 当模板。"
+    },
+    {
+      "id": "sci-box",
+      "name": "sci-box",
+      "summary": "11 个可直接调用的科研绘图复刻模板（雨云图 / 泰勒图 / 环形热图 / Nature 弦图…）",
+      "type": null,
+      "env": null,
+      "purpose": "plot",
+      "status": "candidate",
+      "source": {
+        "kind": "github",
+        "url": "https://github.com/jihe520/sci-box",
+        "ref": "按 commit SHA 钉版（仓库无 tag）"
+      },
+      "license": "none",
+      "size_kb": 15200,
+      "note": "245★，模板质量看起来不错，但**仓库完全没有 license**（无 LICENSE 文件、README 也没提）。自行本机使用可以，**绝不能随 zip 分发**。若要装，先手工建 type=snippets 的 mod.json（add 探测不出它的类型：根目录没有清单文件）。"
+    },
+    {
+      "id": "make-my-figure",
+      "name": "make-my-figure",
+      "summary": "数据驱动的出版级配图引擎（输入 Excel 工作簿，输出成图）",
+      "type": "pysrc",
+      "env": "omicverse",
+      "purpose": "plot",
+      "status": "candidate",
+      "source": {
+        "kind": "github",
+        "url": "https://github.com/surPoudel/make-my-figure",
+        "ref": "v1.2.0"
+      },
+      "license": "MIT",
+      "size_kb": 160391,
+      "note": "仓库 157 MB（大量 benchmark / release_history 产物）。装它的包 `make_my_figure_core` 需要自定义的 setup.py build_py 钩子把 schemas/ 与 style_profiles/ 打进 _bundled/，所以：① 不能按名字装（不在 PyPI）；② 稀疏拉取可能漏掉它需要的资源目录，装完务必 verify。较重，按需再装。"
+    },
+    {
+      "id": "pydeseq2",
+      "name": "PyDESeq2",
+      "summary": "bulk RNA-seq 差异表达（DESeq2 的 Python 实现）",
+      "type": "pypkg",
+      "env": "omicverse",
+      "purpose": "analysis",
+      "status": "authored",
+      "source": { "kind": "github", "url": "https://github.com/scverse/PyDESeq2", "ref": "v0.5.4" },
+      "license": "MIT",
+      "size_kb": 0,
+      "note": "已在本机实测：合成数据 40/40 真阳性。PyPI 项目地址仍指向 owkin 旧仓，按名字装即可。"
+    },
+    {
+      "id": "limma",
+      "name": "limma",
+      "summary": "线性模型差异表达（芯片 / limma-voom）",
+      "type": "rpkg",
+      "env": "r",
+      "purpose": "analysis",
+      "status": "authored",
+      "source": { "kind": "bioconductor", "url": "https://bioconductor.org/packages/limma" },
+      "license": "GPL (>= 2)",
+      "size_kb": 0,
+      "note": "Bioconductor 包，mod.py 会自动转 BiocManager。与 pydeseq2 分工：芯片/复杂设计用 limma。"
+    },
+    {
+      "id": "clusterprofiler",
+      "name": "clusterProfiler",
+      "summary": "GO / KEGG 富集与 GSEA（R 标准件）",
+      "type": "rpkg",
+      "env": "r",
+      "purpose": "analysis",
+      "status": "authored",
+      "source": { "kind": "bioconductor", "url": "https://bioconductor.org/packages/clusterProfiler" },
+      "license": "MIT",
+      "size_kb": 0,
+      "note": "需要物种注释库（org.Hs.eg.db 等），同样用 mod 机制装；依赖较重，首次 5–10 分钟。"
+    },
+    {
+      "id": "wgcna",
+      "name": "WGCNA",
+      "summary": "加权基因共表达网络与模块-性状关联",
+      "type": "rpkg",
+      "env": "r",
+      "purpose": "analysis",
+      "status": "authored",
+      "source": { "kind": "cran", "url": "https://cran.r-project.org/package=WGCNA" },
+      "license": "GPL (>= 2)",
+      "size_kb": 0,
+      "note": "样本 ≥15 才稳；先归一化再跑，别用原始 counts。"
+    },
+    {
+      "id": "enrichment-gseapy",
+      "name": "gseapy 富集分析",
+      "summary": "ORA / GSEA 富集，离线基因集，产出结果表",
+      "type": "snippets",
+      "env": null,
+      "purpose": "analysis",
+      "status": "authored",
+      "source": { "kind": "local", "url": "local://enrichment-gseapy" },
+      "license": "BSD-3-Clause",
+      "size_kb": 0,
+      "note": "自写方法 mod：kind=local，不拉取、不装依赖，gseapy 已随 figkit 装好。"
+    },
+    {
+      "id": "prism",
+      "name": "GraphPad Prism",
+      "summary": "调用本机 Prism：原生统计（ANOVA + Tukey/Dunnett/Dunn）+ 期刊矢量图",
+      "type": "snippets",
+      "env": null,
+      "purpose": "both",
+      "status": "authored",
+      "source": { "kind": "local", "url": "local://prism" },
+      "license": "commercial",
+      "size_kb": 0,
+      "note": "不含 Prism 本体；脚本经 prism.exe @job.pzc 调用，约 70 条命令见 mods/prism/reference/commands.md。"
+    },
+    {
+      "id": "spss",
+      "name": "IBM SPSS Statistics",
+      "summary": "无人值守跑 SPSS：LC50/probit、MIXED、KW、双因素简单效应",
+      "type": "snippets",
+      "env": null,
+      "purpose": "analysis",
+      "status": "authored",
+      "source": { "kind": "local", "url": "local://spss" },
+      "license": "commercial",
+      "size_kb": 0,
+      "note": "不含 SPSS 本体；生产作业 stats.exe -production silent job.spj，常用 60 条语法见 mods/spss/reference/commands.md，全量 328 条在安装目录 syntax_xml/。"
+    }
+  ]
+}

@@ -1,0 +1,66 @@
+{
+  "schema": 1,
+  "id": "network-tox",
+  "name": "网络毒理分析",
+  "summary": "毒物靶点 PPI 网络：STRING 取互作、networkx 算拓扑、排 hub 基因并导出 Cytoscape",
+  "type": "snippets",
+  "env": null,
+  "purpose": "analysis",
+  "source": {
+    "kind": "local",
+    "url": "local://network-tox",
+    "owner": null,
+    "repo": null,
+    "default_branch": null,
+    "ref": null,
+    "sha": null,
+    "subdir": null
+  },
+  "install": {},
+  "routes": [
+    {
+      "intent": "毒物靶点 / 疾病靶点的 PPI 网络与 hub 基因",
+      "backend": "STRING API + networkx",
+      "purpose": "analysis",
+      "why": "在线取互作、本地算 degree/betweenness/clustering，导出的 graphml 可直接进 Cytoscape",
+      "fallback": "Cytoscape 手工操作（不能复现）"
+    },
+    {
+      "intent": "毒物靶点 ∩ 疾病靶点，取交集基因",
+      "backend": "UpSet（cnsplots）/ matplotlib-venn",
+      "purpose": "analysis",
+      "why": "交集是网络毒理的第一步，UpSet 能一次比多个集合",
+      "fallback": "set() 手算 + 韦恩图"
+    },
+    {
+      "intent": "交集基因的 GO / KEGG 富集",
+      "backend": "clusterProfiler（R）或 gseapy（Python）",
+      "purpose": "analysis",
+      "why": "拿到 hub 基因后必须回答\"它们富集在什么通路\"",
+      "fallback": "无"
+    },
+    {
+      "intent": "毒物-靶点-通路网络图",
+      "backend": "networkx 构图 + matplotlib/cytoscape 出图",
+      "purpose": "plot",
+      "why": "三类节点分色，比纯 PPI 更能讲清机制",
+      "fallback": "Cytoscape 手工排版"
+    }
+  ],
+  "license": "MIT",
+  "docs": "docs.md",
+  "templates": [
+    "templates/ppi_network.py"
+  ],
+  "requires_review": false,
+  "detection": {
+    "confidence": "manual",
+    "evidence": "STRING API v12.5 可达（本机实测），networkx / requests 已随 figkit 装好",
+    "notes": [
+      "STRING 的 required_score：400 中置信度、700 高置信度、150 低。",
+      "基因符号必须与物种匹配（人 9606 / 鼠 10090 / 斑马鱼 7955）。",
+      "孤立节点要保留 —— 说明该靶点在你的集合里没有已知互作，是结论不是噪声。"
+    ],
+    "paths_seen": 0
+  }
+}

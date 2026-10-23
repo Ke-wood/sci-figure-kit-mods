@@ -1,0 +1,54 @@
+{
+  "schema": 1,
+  "id": "ggpubfigs",
+  "name": "ggpubfigs",
+  "summary": "colorblind friendly color palettes and ggplot2 graphic system extensions for publication-quality scientific figures",
+  "type": "rgh",
+  "env": "r",
+  "source": {
+    "kind": "github",
+    "url": "https://github.com/JLSteenwyk/ggpubfigs",
+    "owner": "JLSteenwyk",
+    "repo": "ggpubfigs",
+    "default_branch": "master",
+    "ref": "v1.1.4",
+    "sha": null,
+    "subdir": null
+  },
+  "install": {
+    "import_name": "ggpubfigs",
+    "pkg": "ggpubfigs",
+    "lib": "D:/app/R/library"
+  },
+  "routes": [
+    {
+      "intent": "色盲友好配色（ggplot2 作图）",
+      "backend": "ggpubfigs",
+      "why": "friendly_pal() / friendly_pals 色盲安全色板",
+      "fallback": "ggsci（R）或 cmcrameri（figkit）"
+    },
+    {
+      "intent": "简洁期刊主题（去灰底、去网格、细线细轴）",
+      "backend": "ggpubfigs",
+      "why": "theme_grid / theme_simple / theme_black 等 8 个现成主题",
+      "fallback": "theme_classic() / theme_bw()"
+    }
+  ],
+  "license": "MIT",
+  "docs": "docs.md",
+  "templates": [
+    "templates/theme-demo.R"
+  ],
+  "requires_review": false,
+  "detection": {
+    "confidence": "high",
+    "evidence": "DESCRIPTION Package=ggpubfigs",
+    "notes": [
+      "Package=ggpubfigs 不在 CRAN（HTTP 404）→ 走 GitHub",
+      "GitHub 报 NOASSERTION，但从 LICENSE.md 正文认出 MIT"
+    ],
+    "paths_seen": 385
+  },
+  "notes": "不在 CRAN（404），走 GitHub。默认分支是 master 不是 main。GitHub API 报 NOASSERTION 是它读不懂 R 风格的 LICENSE 文件，LICENSE.md 正文是完整 MIT。",
+  "purpose": "plot"
+}

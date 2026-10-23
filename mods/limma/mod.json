@@ -1,0 +1,59 @@
+{
+  "schema": 1,
+  "id": "limma",
+  "name": "limma",
+  "summary": "线性模型差异表达：微阵列与 RNA-seq（limma-voom + eBayes 方差收缩）",
+  "type": "rpkg",
+  "env": "r",
+  "purpose": "analysis",
+  "source": {
+    "kind": "bioconductor",
+    "url": "https://bioconductor.org/packages/limma",
+    "owner": null,
+    "repo": null,
+    "default_branch": null,
+    "ref": "Bioconductor 当前 release（按 R 版本自动解析）",
+    "sha": null,
+    "subdir": null
+  },
+  "install": {
+    "pkg": "limma",
+    "import_name": "limma"
+  },
+  "routes": [
+    {
+      "intent": "bulk 差异表达（芯片或 RNA-seq），要线性模型 + 经验贝叶斯收缩",
+      "backend": "limma",
+      "purpose": "analysis",
+      "why": "领域标准：design 矩阵可写任意对比，eBayes 在小样本上比逐基因检验稳",
+      "fallback": "pydeseq2（mod，counts 专用）"
+    },
+    {
+      "intent": "RNA-seq counts 做 limma-voom",
+      "backend": "limma::voom",
+      "purpose": "analysis",
+      "why": "把 counts 转成带权重的 logCPM，再走 limma 的线性模型",
+      "fallback": "pydeseq2（负二项模型）"
+    },
+    {
+      "intent": "差异表达结果画火山图 / MA 图",
+      "backend": "limma 出表 + cnsplots 出图",
+      "purpose": "both",
+      "why": "同一张表既交结果又出图",
+      "fallback": "ggplot2"
+    }
+  ],
+  "license": "GPL (>= 2)",
+  "docs": "docs.md",
+  "templates": [],
+  "requires_review": false,
+  "detection": {
+    "confidence": "manual",
+    "evidence": "本机手工编写：R 侧此前只有 survival/lme4/rstatix，缺 bulk DE 的线性模型路线",
+    "notes": [
+      "不在 CRAN，走 Bioconductor；mod.py 的 rpkg 已支持 CRAN 失败后自动转 BiocManager。",
+      "与 pydeseq2 的分工：计数矩阵且样本少时优先 pydeseq2；芯片/已归一化数据或需要自定义对比时用 limma。"
+    ],
+    "paths_seen": 0
+  }
+}

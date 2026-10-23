@@ -1,0 +1,48 @@
+{
+  "schema": 1,
+  "id": "icarus-figures",
+  "name": "Icarus-Figures",
+  "summary": "Publication-grade figures for scientific papers — reproducible matplotlib & TikZ, with a quality bar, composition paradigms, and journal-gra",
+  "type": "pysrc",
+  "env": "omicverse",
+  "source": {
+    "kind": "github",
+    "url": "https://github.com/TAO-QKV/Icarus-Figures",
+    "owner": "TAO-QKV",
+    "repo": "Icarus-Figures",
+    "default_branch": "main",
+    "ref": "0bcaa40c07ef0dc6ea1506ab147ce0a4f5a542fd",
+    "sha": "0bcaa40c07ef0dc6ea1506ab147ce0a4f5a542fd",
+    "subdir": null
+  },
+  "install": {
+    "import_name": "paperfig",
+    "dist": "paperfig"
+  },
+  "routes": [
+    {
+      "intent": "顶刊风格单图（Python，要 cnsplots 没有的图型）",
+      "backend": "paperfig",
+      "why": "约 50 个图型函数；paper_style + register_style() 注册 paperfig 样式",
+      "fallback": "cnsplots（figkit）"
+    },
+    {
+      "intent": "raincloud / sankey / chord / manhattan / 三元图 / 山脊图",
+      "backend": "paperfig",
+      "why": "这些冷门图型 cnsplots 没有；paperfig 都有",
+      "fallback": "无"
+    }
+  ],
+  "license": "MIT",
+  "docs": "docs.md",
+  "templates": [],
+  "requires_review": false,
+  "detection": {
+    "confidence": "high",
+    "evidence": "PyPI 上的 paperfig 是**别的项目**（https://sekika.github.io/paperfig/ https://sekika.github.io/paperfig/ https://github.com/s），不能按名字装",
+    "notes": [],
+    "paths_seen": 68
+  },
+  "notes": "**不能**用 pypkg 按名字装：PyPI 上的 paperfig 是 sekika/paperfig，另一个项目。本仓库的包名也叫 paperfig 但只存在于 GitHub，故走 pysrc。仓库无 tag，按 commit SHA 钉版。装在 omicverse 环境（不碰 figkit 的 matplotlib==3.10.8 钉版）。",
+  "purpose": "plot"
+}

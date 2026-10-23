@@ -1,0 +1,80 @@
+{
+  "schema": 1,
+  "id": "spss",
+  "name": "IBM SPSS Statistics",
+  "summary": "无人值守跑 SPSS（stats.exe -production silent）：LC50 概率单位、混合模型、KW、稳健方差，结果从 OXML 读",
+  "type": "snippets",
+  "env": null,
+  "purpose": "analysis",
+  "source": {
+    "kind": "local",
+    "url": "local://spss",
+    "owner": null,
+    "repo": null,
+    "default_branch": null,
+    "ref": null,
+    "sha": null,
+    "subdir": null
+  },
+  "install": {},
+  "routes": [
+    {
+      "intent": "LC50 / EC50 概率单位法（急性毒性）",
+      "backend": "SPSS（PROBIT / 生产作业）",
+      "purpose": "analysis",
+      "why": "Prism 9/10 都不做 probit；SPSS 的拟合优度与置信区间是标准实现",
+      "fallback": "statsmodels GLM（probit 链）自己算，置信区间要自己推"
+    },
+    {
+      "intent": "线性混合模型 / 重复测量 / 复杂方差结构",
+      "backend": "SPSS（MIXED / GLM）",
+      "purpose": "analysis",
+      "why": "MIXED 是 SPSS 的强项；Prism 的混合模型到 11 才补上",
+      "fallback": "R lme4（本机已装）"
+    },
+    {
+      "intent": "Kruskal-Wallis（非参数单因素）",
+      "backend": "SPSS（NPAR TESTS /K-W）",
+      "purpose": "analysis",
+      "why": "H 与 scipy 逐位一致，且不会像 Prism 那样因结果表编号挂死",
+      "fallback": "scipy.stats.kruskal"
+    },
+    {
+      "intent": "双因素 + 简单效应（EMMEANS）",
+      "backend": "SPSS（UNIANOVA）",
+      "purpose": "analysis",
+      "why": "一次出 8 张表，含简单效应与 Bonferroni 校正",
+      "fallback": "statsmodels 手写对比"
+    },
+    {
+      "intent": "逻辑回归 / 有序回归 / 因子分析 / 信度（Cronbach α）/ 聚类",
+      "backend": "SPSS（LOGISTIC REGRESSION · NOMREG · FACTOR · RELIABILITY · QUICK CLUSTER）",
+      "purpose": "analysis",
+      "why": "这些是 SPSS 的完整实现，输出表结构规整且能进 OXML",
+      "fallback": "statsmodels / sklearn（信度要手算）"
+    },
+    {
+      "intent": "数据准备：宽长转换、分组聚合、多重插补",
+      "backend": "SPSS（CASESTOVARS · VARSTOCASES · AGGREGATE · MULTIPLE IMPUTATION）",
+      "purpose": "analysis",
+      "why": "在 SPSS 里一次做完预处理与建模，避免来回导表丢精度",
+      "fallback": "pandas / sklearn IterativeImputer"
+    }
+  ],
+  "license": "commercial",
+  "docs": "docs.md",
+  "templates": [
+    "templates/spss_run.py",
+    "templates/spss_py.py"
+  ],
+  "requires_review": false,
+  "detection": {
+    "confidence": "manual",
+    "evidence": "本机 D:/app/spss/stats.exe（27.0.1.0），带 production-1.2.xsd 与 spss-output-1.6.xsd",
+    "notes": [
+      "不打包 SPSS，只提供调用方式与纪律。",
+      "直接 stats.exe foo.sps 会弹 GUI 挂住；必须走生产作业 stats.exe -production silent job.spj。"
+    ],
+    "paths_seen": 0
+  }
+}

@@ -1,0 +1,50 @@
+{
+  "schema": 1,
+  "id": "sci-figure",
+  "name": "sci-figure",
+  "summary": "AI skill for scientific figure generation, tuned for SCI and Elsevier-style manuscript figures with Python and R examples.",
+  "type": "snippets",
+  "env": null,
+  "source": {
+    "kind": "github",
+    "url": "https://github.com/xiao-yuling/sci-figure",
+    "owner": "xiao-yuling",
+    "repo": "sci-figure",
+    "default_branch": "main",
+    "ref": "a44fbcae2de59cfdefb016a0eab86e66e0ba8555",
+    "sha": "a44fbcae2de59cfdefb016a0eab86e66e0ba8555",
+    "subdir": null
+  },
+  "install": {},
+  "routes": [
+    {
+      "intent": "要一份能直接抄改的 SCI 图脚本骨架",
+      "backend": "snippet:examples/python/",
+      "why": "8 个图型的完整示例脚本 + 期刊 rcParams 配方",
+      "fallback": "按 references/fonts.md 自己写"
+    },
+    {
+      "intent": "出图前的自查清单",
+      "backend": "snippet:references/qa-checklist.md",
+      "why": "投稿前容易漏的检查项",
+      "fallback": "无"
+    }
+  ],
+  "license": "MIT",
+  "docs": "docs.md",
+  "templates": [
+    "templates/bar-with-points.py",
+    "templates/scatter-groups.py"
+  ],
+  "requires_review": false,
+  "detection": {
+    "confidence": "ambiguous",
+    "evidence": "根目录有 SKILL.md，且带 examples/ 或 templates/",
+    "notes": [
+      "这是一个 Claude skill（不是包）。但它带 examples/ 或 templates/，可以只取其中的代码模板当 snippets 用 —— type 已按此建议，但置信度不足，需人工确认后再装。"
+    ],
+    "paths_seen": 33
+  },
+  "notes": "人工确认：这是一个 Claude skill，不是包。取它 examples/ 与 references/ 里的模板用（type=snippets，不装任何东西）。requires_review 已由人工解除。",
+  "purpose": "plot"
+}

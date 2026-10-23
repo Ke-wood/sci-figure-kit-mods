@@ -1,0 +1,75 @@
+{
+  "schema": 1,
+  "id": "prism",
+  "name": "GraphPad Prism",
+  "summary": "用 Prism 模板做统计分析（只出数不出图）：ANOVA + Tukey/Dunnett/Dunn、显著性字母、剂量反应，结果读 results.json",
+  "type": "snippets",
+  "env": null,
+  "purpose": "analysis",
+  "source": {
+    "kind": "local",
+    "url": "local://prism",
+    "owner": null,
+    "repo": null,
+    "default_branch": null,
+    "ref": null,
+    "sha": null,
+    "subdir": null
+  },
+  "install": {},
+  "routes": [
+    {
+      "intent": "单因素 ANOVA + Tukey / Dunnett / Dunn 事后检验",
+      "backend": "Prism（.prism 模板 → results.json）",
+      "purpose": "analysis",
+      "why": "SPSS 27 拿不到 Tukey/Dunnett/Dunn；Prism 的成对比较与字母直接是结构化 JSON",
+      "fallback": "scipy + statsmodels 自己算（没有 CLD 字母）"
+    },
+    {
+      "intent": "要显著性字母（紧凑字母显示 CLD）",
+      "backend": "Prism compactLetterDisplay",
+      "purpose": "analysis",
+      "why": "全配对设计下 Prism 直接给每组字母，Python 侧要自己实现 Piepho 算法",
+      "fallback": "手动按 p 值分组标注"
+    },
+    {
+      "intent": "t 检验 / 线性回归 / 剂量反应曲线（EC50）",
+      "backend": "Prism（XY / Column 模板）",
+      "purpose": "analysis",
+      "why": "曲线拟合与参数置信区间是 Prism 的看家本领，结果同样进 results.json",
+      "fallback": "scipy curve_fit / statsmodels"
+    },
+    {
+      "intent": "已有一份 .prism 模板，换一批数据重跑同一套分析",
+      "backend": "Prism（Import + RecalcAll + Save）",
+      "purpose": "analysis",
+      "why": "分析参数锁在模板 JSON 里，换行数不用改；列数必须与模板一致",
+      "fallback": "无（换模板等于换一套分析）"
+    },
+    {
+      "intent": "一批数据套同一模板批量重算",
+      "backend": "Prism（ForEach 或循环调 prism_analyze.py）",
+      "purpose": "analysis",
+      "why": "每次约 4 秒；脚本层 ForEach 可一次跑完一个目录",
+      "fallback": "Python 循环，一个文件一个进程"
+    }
+  ],
+  "license": "commercial",
+  "docs": "docs.md",
+  "templates": [
+    "templates/prism_analyze.py",
+    "templates/prism_run.py"
+  ],
+  "requires_review": false,
+  "detection": {
+    "confidence": "manual",
+    "evidence": "本机 D:/app/prism/prism.exe（10.6.1）；Project1.prism 模板端到端实测：7 组 one-way ANOVA + Tukey，F/p/CI/校正 p 与 scipy+statsmodels 完全一致",
+    "notes": [
+      "只做分析：图样式是二进制、脚本改不了，出图交给 cnsplots / ggplot2。",
+      "**Prism 只出数不出图**，模板里不需要图，建模板只要一张表 + 一个分析。",
+      "脚本任何命令出错 → 模态框 → 永久挂死；必须先静态检查再启动，并带超时 kill。",
+      "`@` 后面的脚本路径必须是反斜杠，正斜杠会让 Prism 打不开脚本并静默退出（rc=0）。"
+    ],
+    "paths_seen": 0
+  }
+}

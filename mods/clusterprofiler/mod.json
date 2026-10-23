@@ -1,0 +1,60 @@
+{
+  "schema": 1,
+  "id": "clusterprofiler",
+  "name": "clusterProfiler",
+  "summary": "GO / KEGG 富集与 GSEA 的 R 标准实现，含富集结果可视化",
+  "type": "rpkg",
+  "env": "r",
+  "purpose": "analysis",
+  "source": {
+    "kind": "bioconductor",
+    "url": "https://bioconductor.org/packages/clusterProfiler",
+    "owner": null,
+    "repo": null,
+    "default_branch": null,
+    "ref": "Bioconductor 当前 release（按 R 版本自动解析）",
+    "sha": null,
+    "subdir": null
+  },
+  "install": {
+    "pkg": "clusterProfiler",
+    "import_name": "clusterProfiler"
+  },
+  "routes": [
+    {
+      "intent": "GO 富集（BP/CC/MF）/ KEGG 通路富集，要 p.adjust 与基因列表",
+      "backend": "clusterProfiler::enrichGO / enrichKEGG",
+      "purpose": "analysis",
+      "why": "R 生态标准，输出可直接接 enrichplot 的 dotplot/ridgeplot",
+      "fallback": "gseapy（mod，离线，不需注释库）"
+    },
+    {
+      "intent": "按排序做 GSEA（gseGO / gseKEGG）",
+      "backend": "clusterProfiler::gseGO / gseKEGG",
+      "purpose": "analysis",
+      "why": "不需要切阈值，保留全部基因的排序信息",
+      "fallback": "gseapy.prerank（mod）"
+    },
+    {
+      "intent": "富集结果出图（dotplot / ridgeplot / cnetplot）",
+      "backend": "enrichplot / clusterProfiler 自带绘图",
+      "purpose": "both",
+      "why": "避免自己拼 ggplot",
+      "fallback": "gseapy.dotplot + cnsplots"
+    }
+  ],
+  "license": "MIT",
+  "docs": "docs.md",
+  "templates": [],
+  "requires_review": false,
+  "detection": {
+    "confidence": "manual",
+    "evidence": "本机手工编写：R 侧没有任何富集能力，gseapy 只在 Python 侧",
+    "notes": [
+      "**必须先有注释库**：人用 org.Hs.eg.db，鼠用 org.Mm.eg.db，否则 enrichGO 直接报错。",
+      "注释库同样是 R 包，用同样的 mod 机制装（type=rpkg, env=r, install.pkg=org.Hs.eg.db）。",
+      "依赖较重（AnnotationDbi / DOSE / enrichplot / GOSemSim），首次安装 5–10 分钟。"
+    ],
+    "paths_seen": 0
+  }
+}

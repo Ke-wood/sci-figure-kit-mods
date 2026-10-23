@@ -1,0 +1,53 @@
+{
+  "schema": 1,
+  "id": "colorcet",
+  "name": "colorcet",
+  "summary": "感知均匀色图集合：适合热图/连续量的 Python 色图（含色盲安全与发散方案）",
+  "type": "pypkg",
+  "env": "figkit",
+  "purpose": "plot",
+  "source": {
+    "kind": "github",
+    "url": "https://github.com/holoviz/colorcet",
+    "owner": "holoviz",
+    "repo": "colorcet",
+    "default_branch": "main",
+    "ref": "3.2.1",
+    "sha": null,
+    "subdir": null
+  },
+  "install": {
+    "spec": "colorcet",
+    "dist": "colorcet",
+    "import_name": "colorcet"
+  },
+  "routes": [
+    {
+      "intent": "热图 / 连续色标要感知均匀、色盲安全（Python）",
+      "backend": "colorcet.cm / colorcet.palette",
+      "purpose": "plot",
+      "why": "CET 系列是为科学可视化设计的，亮度单调、色盲可辨；比 jet/rainbow 安全得多",
+      "fallback": "viridis / cividis"
+    },
+    {
+      "intent": "发散色标（正负、z-score）",
+      "backend": "colorcet 的 diverging 色图",
+      "purpose": "plot",
+      "why": "发散色图必须亮度对称，CET 的 diverging 系列满足",
+      "fallback": "RdBu_r / coolwarm"
+    }
+  ],
+  "license": "CC-BY-4.0",
+  "docs": "docs.md",
+  "templates": [],
+  "requires_review": false,
+  "detection": {
+    "confidence": "high",
+    "evidence": "PyPI colorcet 3.2.1；figkit 环境",
+    "notes": [
+      "`import colorcet as cc` 后，`cc.cm['rainbow']`、`cc.cm['CET_D1']` 直接给 matplotlib colormap。",
+      "会带 bokeh 依赖（colorcet 原本是 HoloViz 生态的），不影响 matplotlib 使用。"
+    ],
+    "paths_seen": 0
+  }
+}

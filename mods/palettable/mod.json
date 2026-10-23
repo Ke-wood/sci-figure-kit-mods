@@ -1,0 +1,53 @@
+{
+  "schema": 1,
+  "id": "palettable",
+  "name": "palettable",
+  "summary": "ColorBrewer / CartoColors / 手动作家色板的 Python 实现，直接给十六进制与 matplotlib 色图",
+  "type": "pypkg",
+  "env": "figkit",
+  "purpose": "plot",
+  "source": {
+    "kind": "github",
+    "url": "https://github.com/ErwanDL/palettable",
+    "owner": "ErwanDL",
+    "repo": "palettable",
+    "default_branch": "master",
+    "ref": "3.3.3",
+    "sha": null,
+    "subdir": null
+  },
+  "install": {
+    "spec": "palettable",
+    "dist": "palettable",
+    "import_name": "palettable"
+  },
+  "routes": [
+    {
+      "intent": "要 ColorBrewer / CartoColors 的色板（Python，不装 R）",
+      "backend": "palettable.colorbrewer / cartocolors",
+      "purpose": "plot",
+      "why": "ColorBrewer 的定性/顺序/发散方案在这里齐全，`.hex_colors` 直接拿列表",
+      "fallback": "手写十六进制 / cmcrameri"
+    },
+    {
+      "intent": "色板要能直接变成 matplotlib colormap",
+      "backend": "palettable 的 .mpl_colormap",
+      "purpose": "plot",
+      "why": "省去 ListedColormap 的样板代码",
+      "fallback": "matplotlib.colors.ListedColormap 手动构造"
+    }
+  ],
+  "license": "MIT",
+  "docs": "docs.md",
+  "templates": [],
+  "requires_review": false,
+  "detection": {
+    "confidence": "high",
+    "evidence": "PyPI palettable 3.3.3",
+    "notes": [
+      "ColorBrewer 的定性色板最多 12 色，超过就要循环或换方案。",
+      "老版本 API 是 `colorbrewer.Set1_9.hex_colors`；3.x 仍兼容。"
+    ],
+    "paths_seen": 0
+  }
+}

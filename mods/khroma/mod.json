@@ -1,0 +1,52 @@
+{
+  "schema": 1,
+  "id": "khroma",
+  "name": "khroma",
+  "summary": "科学配色方案 + 色盲模拟：35 套出版级色板，能直接检查色盲下的可分辨性",
+  "type": "rpkg",
+  "env": "r",
+  "purpose": "plot",
+  "source": {
+    "kind": "cran",
+    "url": "https://cran.r-project.org/package=khroma",
+    "owner": null,
+    "repo": null,
+    "default_branch": null,
+    "ref": "CRAN 当前版本",
+    "sha": null,
+    "subdir": null
+  },
+  "install": {
+    "pkg": "khroma",
+    "import_name": "khroma"
+  },
+  "routes": [
+    {
+      "intent": "要色盲安全的出版级配色，并验证色盲下是否还分得开",
+      "backend": "khroma::colour + check_colorblind",
+      "purpose": "plot",
+      "why": "内置 35 套方案（含 Okabe-Ito、bright、vibrant 等），并能把图转成各类色盲视角检查",
+      "fallback": "Okabe-Ito 手填十六进制"
+    },
+    {
+      "intent": "连续色标 / 发散色标（感知均匀）",
+      "backend": "khroma 的 scientific colour maps",
+      "purpose": "plot",
+      "why": "与 cmcrameri 同源的设计目标，R 侧直接可用",
+      "fallback": "viridisLite / scico"
+    }
+  ],
+  "license": "GPL (>= 3)",
+  "docs": "docs.md",
+  "templates": [],
+  "requires_review": false,
+  "detection": {
+    "confidence": "manual",
+    "evidence": "CRAN khroma 1.17.0",
+    "notes": [
+      "函数名是 colour()（英式拼写），不是 color()。",
+      "色盲模拟依赖 colorspace，能直接输出模拟后的图检查。"
+    ],
+    "paths_seen": 0
+  }
+}

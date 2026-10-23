@@ -1,0 +1,54 @@
+{
+  "schema": 1,
+  "id": "ssdtools",
+  "name": "ssdtools",
+  "summary": "物种敏感度分布（SSD）：拟合多分布并加权，出 HC5 与 PNEC —— 生态毒理风险评估的标准工具",
+  "type": "rpkg",
+  "env": "r",
+  "purpose": "analysis",
+  "source": {
+    "kind": "cran",
+    "url": "https://cran.r-project.org/package=ssdtools",
+    "owner": null,
+    "repo": null,
+    "default_branch": null,
+    "ref": "CRAN 当前版本",
+    "sha": null,
+    "subdir": null
+  },
+  "install": {
+    "pkg": "ssdtools",
+    "import_name": "ssdtools"
+  },
+  "routes": [
+    {
+      "intent": "物种敏感度分布 / HC5 / PNEC / 生态风险评估",
+      "backend": "ssdtools::ssd_fit_dists + ssd_hc",
+      "purpose": "analysis",
+      "why": "多分布（lnorm/llogis/gamma/burrIII 等）拟合 + AIC 加权，HC5 带置信区间，是 SSD 的标准实现",
+      "fallback": "fitdistrplus 手写单分布（无模型加权）"
+    },
+    {
+      "intent": "SSD 曲线图 / 各物种累积概率",
+      "backend": "ssdtools::ssd_plot",
+      "purpose": "plot",
+      "why": "自带 ggplot 图层，能叠 HC5 与置信带",
+      "fallback": "ggplot2 手画"
+    }
+  ],
+  "license": "Apache-2.0",
+  "docs": "docs.md",
+  "templates": [
+    "templates/ssd_hc5.R"
+  ],
+  "requires_review": false,
+  "detection": {
+    "confidence": "manual",
+    "evidence": "CRAN ssdtools 2.7.0；本机此前无 SSD 能力",
+    "notes": [
+      "生态毒理的核心交付物：HC5（保护 95% 物种的浓度）与 PNEC=HC5/AF。",
+      "输入是「物种-毒性值」两列表，毒性值单位要统一（mg/L）。"
+    ],
+    "paths_seen": 0
+  }
+}

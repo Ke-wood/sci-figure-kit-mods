@@ -1,0 +1,52 @@
+{
+  "schema": 1,
+  "id": "paletteer",
+  "name": "paletteer",
+  "summary": "R 的配色聚合器：一条命令调用 100+ 个配色包的数千个调色板（ggsci / RColorBrewer / viridis / 手动作家色板…）",
+  "type": "rpkg",
+  "env": "r",
+  "purpose": "plot",
+  "source": {
+    "kind": "cran",
+    "url": "https://cran.r-project.org/package=paletteer",
+    "owner": null,
+    "repo": null,
+    "default_branch": null,
+    "ref": "CRAN 当前版本",
+    "sha": null,
+    "subdir": null
+  },
+  "install": {
+    "pkg": "paletteer",
+    "import_name": "paletteer"
+  },
+  "routes": [
+    {
+      "intent": "R 里找配色：期刊色板 / ColorBrewer / viridis / 某个包的主题色",
+      "backend": "paletteer::paletteer_d / paletteer_c",
+      "purpose": "plot",
+      "why": "一个包覆盖上千个调色板，不用记住每个色板属于哪个包；还能直接接 ggplot scale",
+      "fallback": "RColorBrewer / viridisLite / ggsci 单独调"
+    },
+    {
+      "intent": "要色板的准确十六进制值（写进 Python 或文档）",
+      "backend": "paletteer::paletteer_d(\"包::名字\")",
+      "purpose": "plot",
+      "why": "返回十六进制向量，可直接粘到别的语言里",
+      "fallback": "手动从文档抄"
+    }
+  ],
+  "license": "MIT",
+  "docs": "docs.md",
+  "templates": [],
+  "requires_review": false,
+  "detection": {
+    "confidence": "manual",
+    "evidence": "CRAN paletteer 1.7.0；本机此前只有 ggsci 与 RColorBrewer 两套",
+    "notes": [
+      "调色板命名格式固定为 `包名::调色板名`，例如 `ggsci::npg`、`RColorBrewer::Set2`。",
+      "`palettes_d_names` 可列出全部离散色板，先查再取，别凭记忆写名字。"
+    ],
+    "paths_seen": 0
+  }
+}

@@ -1,0 +1,58 @@
+{
+  "schema": 1,
+  "id": "enrichment-gseapy",
+  "name": "gseapy 富集分析",
+  "summary": "ORA / GSEA 富集：本地基因集离线计算，产出富集表、统计量与人读摘要",
+  "type": "snippets",
+  "env": null,
+  "purpose": "analysis",
+  "source": {
+    "kind": "local",
+    "url": "local://enrichment-gseapy",
+    "owner": null,
+    "repo": null,
+    "default_branch": null,
+    "ref": null,
+    "sha": null,
+    "subdir": null
+  },
+  "install": {},
+  "routes": [
+    {
+      "intent": "给一列基因做 GO / KEGG / 自定义基因集富集（ORA）",
+      "backend": "gseapy.enrich",
+      "purpose": "analysis",
+      "why": "离线超几何检验，不需要联网、不需要注释数据库，给 dict 或 GMT 即可",
+      "fallback": "clusterProfiler（R，需另装 mod）"
+    },
+    {
+      "intent": "按 log2FC 排序做 GSEA（不要切阈值）",
+      "backend": "gseapy.prerank",
+      "purpose": "analysis",
+      "why": "保留全部基因的排序信息，比 ORA 更不容易因阈值选择产生假象",
+      "fallback": "fgsea（R，需另装 mod）"
+    },
+    {
+      "intent": "富集结果画气泡图 / 条形图 / 富集地图",
+      "backend": "gseapy.dotplot + cnsplots",
+      "purpose": "both",
+      "why": "gseapy 自带 dotplot/barplot；要投稿风格就用 cnsplots 读同一张结果表",
+      "fallback": "ggplot2 手写"
+    }
+  ],
+  "license": "BSD-3-Clause",
+  "docs": "docs.md",
+  "templates": [
+    "templates/ora.py"
+  ],
+  "requires_review": false,
+  "detection": {
+    "confidence": "manual",
+    "evidence": "本机手工编写：gseapy 1.3.1 已随 figkit 装好，缺的是方法与结果契约",
+    "notes": [
+      "snippets 类型不安装任何东西，只提供脚本模板与文档。",
+      "gseapy 装在 figkit 环境：D:/app/envs/figkit/Scripts/python.exe"
+    ],
+    "paths_seen": 0
+  }
+}

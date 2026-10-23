@@ -1,0 +1,60 @@
+{
+  "schema": 1,
+  "id": "wgcna",
+  "name": "WGCNA",
+  "summary": "加权基因共表达网络：模块划分、模块-性状关联、枢纽基因",
+  "type": "rpkg",
+  "env": "r",
+  "purpose": "analysis",
+  "source": {
+    "kind": "cran",
+    "url": "https://cran.r-project.org/package=WGCNA",
+    "owner": null,
+    "repo": null,
+    "default_branch": null,
+    "ref": "CRAN 当前版本",
+    "sha": null,
+    "subdir": null
+  },
+  "install": {
+    "pkg": "WGCNA",
+    "import_name": "WGCNA"
+  },
+  "routes": [
+    {
+      "intent": "共表达网络 / 基因模块划分 / 找枢纽基因（hub genes）",
+      "backend": "WGCNA::blockwiseModules",
+      "purpose": "analysis",
+      "why": "共表达网络的事实标准，模块可直接接性状做关联",
+      "fallback": "无（相关聚类只能算个近似）"
+    },
+    {
+      "intent": "模块与临床性状关联（module-trait relationship）",
+      "backend": "WGCNA::cor + moduleTraitCor",
+      "purpose": "analysis",
+      "why": "输出模块-性状相关矩阵与 p 值，适合画热图",
+      "fallback": "无"
+    },
+    {
+      "intent": "模块-性状热图 / 模块成员度图",
+      "backend": "WGCNA 出表 + ComplexHeatmap",
+      "purpose": "both",
+      "why": "相关矩阵本质就是热图数据",
+      "fallback": "ggplot2"
+    }
+  ],
+  "license": "GPL (>= 2)",
+  "docs": "docs.md",
+  "templates": [],
+  "requires_review": false,
+  "detection": {
+    "confidence": "manual",
+    "evidence": "本机手工编写：R 侧没有网络/模块分析能力",
+    "notes": [
+      "输入是表达矩阵（行=样本、列=基因），不是 counts 原始值；建议先做 vst/log 归一化。",
+      "样本 < 15 时模块很不稳，别硬跑；先做 sample network 看离群样本。",
+      "耗内存：基因数上万时先过滤低表达，或分块跑。"
+    ],
+    "paths_seen": 0
+  }
+}

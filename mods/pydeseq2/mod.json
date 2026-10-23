@@ -1,0 +1,53 @@
+{
+  "schema": 1,
+  "id": "pydeseq2",
+  "name": "PyDESeq2",
+  "summary": "Python 版 DESeq2：bulk RNA-seq 差异表达（负二项 GLM、Wald 检验、LFC 收缩）",
+  "type": "pypkg",
+  "env": "omicverse",
+  "purpose": "analysis",
+  "source": {
+    "kind": "github",
+    "url": "https://github.com/scverse/PyDESeq2",
+    "owner": "scverse",
+    "repo": "PyDESeq2",
+    "default_branch": "main",
+    "ref": "v0.5.4",
+    "sha": "2ca3b74c9b2b994b44c071f17ec76ad1cf1595e9",
+    "subdir": null
+  },
+  "install": {
+    "spec": "pydeseq2",
+    "dist": "pydeseq2",
+    "import_name": "pydeseq2"
+  },
+  "routes": [
+    {
+      "intent": "bulk RNA-seq 差异表达 / 拿 counts 矩阵做 DEA / 要 log2FC 与 padj",
+      "backend": "pydeseq2",
+      "purpose": "analysis",
+      "why": "DESeq2 的 Python 实现，负二项 GLM + Wald 检验 + LFC 收缩；omicverse 环境里依赖已齐",
+      "fallback": "R 侧 limma / DESeq2（本机未装）"
+    },
+    {
+      "intent": "差异表达结果画火山图 / MA 图",
+      "backend": "pydeseq2 出表 + cnsplots 出图",
+      "purpose": "both",
+      "why": "同一份结果表既交表也出图，避免两套数",
+      "fallback": "ggplot2 手写"
+    }
+  ],
+  "license": "MIT",
+  "docs": "docs.md",
+  "templates": [],
+  "requires_review": false,
+  "detection": {
+    "confidence": "high",
+    "evidence": "PyPI 项目地址仍指向 owkin/pydeseq2（历史归属），scverse/PyDESeq2 是同一项目的现址；pypkg 按名字装等价且能拿到 wheel",
+    "notes": [
+      "人工确认：add 探测判成 pysrc 是因为 PyPI 的项目 URL 没跟着仓库迁移更新，不是两个不同项目。",
+      "依赖实测：pip --dry-run 显示 anndata/formulaic/numpy/pandas/sklearn/scipy 全部已满足，安装不会顶动现有包。"
+    ],
+    "paths_seen": 106
+  }
+}

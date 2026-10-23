@@ -1,0 +1,61 @@
+{
+  "schema": 1,
+  "id": "drc",
+  "name": "drc",
+  "summary": "剂量-反应曲线拟合：4PL/3PL、hormesis、ED50/EC50 与置信区间、多曲线比较",
+  "type": "rpkg",
+  "env": "r",
+  "purpose": "analysis",
+  "source": {
+    "kind": "cran",
+    "url": "https://cran.r-project.org/package=drc",
+    "owner": null,
+    "repo": null,
+    "default_branch": null,
+    "ref": "CRAN 当前版本",
+    "sha": null,
+    "subdir": null
+  },
+  "install": {
+    "pkg": "drc",
+    "import_name": "drc"
+  },
+  "routes": [
+    {
+      "intent": "剂量-反应曲线 / EC50 / ED50 带置信区间",
+      "backend": "drc::drm + ED()",
+      "purpose": "analysis",
+      "why": "drc 是毒理学剂量反应的 R 标准件：模型选择、ED 估计、置信区间一步到位",
+      "fallback": "Python scipy curve_fit（CI 要自己推）"
+    },
+    {
+      "intent": "低剂量刺激效应（hormesis）/ U 形曲线",
+      "backend": "drc::drm(fct = BC.5())",
+      "purpose": "analysis",
+      "why": "Brian-Cousens 模型是 hormesis 的标准参数化",
+      "fallback": "分段回归（不推荐）"
+    },
+    {
+      "intent": "比较处理组与对照组的 EC50 是否不同",
+      "backend": "drc::compParm",
+      "purpose": "analysis",
+      "why": "直接给两组 ED50 之比的置信区间与检验",
+      "fallback": "各自算 CI 看是否重叠（不严谨）"
+    }
+  ],
+  "license": "GPL (>= 2)",
+  "docs": "docs.md",
+  "templates": [
+    "templates/dose_response.R"
+  ],
+  "requires_review": false,
+  "detection": {
+    "confidence": "manual",
+    "evidence": "CRAN drc 4.0-0；本机此前只有 Python 手写 4PL",
+    "notes": [
+      "输入：浓度、响应、重复（长表）。响应建议先换算成相对抑制率/死亡率。",
+      "模型选择看 AIC，不看 R²。"
+    ],
+    "paths_seen": 0
+  }
+}

@@ -1,0 +1,58 @@
+{
+  "schema": 1,
+  "id": "mixture-tox",
+  "name": "混合物毒性（CA / IA）",
+  "summary": "联合暴露预测：浓度加和（CA）、独立作用（IA）、TU 判定与偏差比 MDR",
+  "type": "snippets",
+  "env": null,
+  "purpose": "analysis",
+  "source": {
+    "kind": "local",
+    "url": "local://mixture-tox",
+    "owner": null,
+    "repo": null,
+    "default_branch": null,
+    "ref": null,
+    "sha": null,
+    "subdir": null
+  },
+  "install": {},
+  "routes": [
+    {
+      "intent": "两种以上污染物的联合毒性预测（CA / IA）",
+      "backend": "mixture-tox（4PL 拟合 + CA/IA 模型）",
+      "purpose": "analysis",
+      "why": "CA 假设作用位点相同、IA 假设作用模式独立；两个模型给出预测区间，实测落在区间内即无交互",
+      "fallback": "drc 拟合单组分后手算 TU"
+    },
+    {
+      "intent": "判断协同 / 拮抗作用（TU 或 MDR）",
+      "backend": "TU = Σ(fi·C/EC50i)，MDR = 实测/预测",
+      "purpose": "analysis",
+      "why": "TU≈1 浓度加和、<1 协同、>1 拮抗；MDR 给出相对偏差倍数",
+      "fallback": "无"
+    },
+    {
+      "intent": "混合物的剂量-反应曲线预测",
+      "backend": "mixture-tox curves.csv",
+      "purpose": "both",
+      "why": "按效应水平输出 CA/IA 两条预测曲线，可直接叠实测点画图",
+      "fallback": "手动按 EC50 比例缩放曲线"
+    }
+  ],
+  "license": "MIT",
+  "docs": "docs.md",
+  "templates": [
+    "templates/mixture_ca_ia.py"
+  ],
+  "requires_review": false,
+  "detection": {
+    "confidence": "manual",
+    "evidence": "解析解验证：A(EC50=1)+B(EC50=4) 等比例混合，CA 预测 1.6000、IA 预测 5.7016，程序输出 1.600016 / 5.701587",
+    "notes": [
+      "输入是单组分剂量-反应（0–1 效应）+ 混合物比例。",
+      "CA 与 IA 不是二选一：两个都算，实测落在两者之间说明没有额外交互。"
+    ],
+    "paths_seen": 0
+  }
+}
