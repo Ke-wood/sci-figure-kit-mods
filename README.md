@@ -1,6 +1,6 @@
 # sci-figure-kit-mods
 
-[`sci-figure-kit`](https://github.com/<you>/sci-figure-kit) 的 mod 仓库。
+[`sci-figure-kit`](https://github.com/Ke-wood/sci-figure-kit-core) 的 mod 仓库。
 每个 mod 是一个目录：清单 + 文档 + 可选模板。**不含任何可执行安装命令** ——
 命令由核心仓库的 `mod.py` 按 `type` / `env` 拼绝对路径。
 
