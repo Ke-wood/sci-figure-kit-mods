@@ -51,7 +51,7 @@
     "evidence": "本机手工编写：gseapy 1.3.1 已随 figkit 装好，缺的是方法与结果契约",
     "notes": [
       "snippets 类型不安装任何东西，只提供脚本模板与文档。",
-      "gseapy 装在 figkit 环境：D:/app/envs/figkit/Scripts/python.exe"
+      "gseapy 装在 figkit 环境（解释器由 envs.json 的 figkit_python 决定）"
     ],
     "paths_seen": 0
   }

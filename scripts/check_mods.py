@@ -19,6 +19,22 @@ REQUIRED = ("id", "type", "env", "purpose", "summary", "routes", "source")
 TYPES = {"pypkg", "pysrc", "rpkg", "rgh", "mplstyle", "rstyle", "snippets"}
 PURPOSES = {"plot", "analysis", "both"}
 
+# 盘符绝对路径，如 D:/app/R/library —— 清单里出现就说明写死了作者的机器。
+# 只匹配「单字母 + 冒号 + 斜杠」，不会误伤 https://。
+DRIVE_PATH = re.compile(r"(?<![A-Za-z0-9])[A-Za-z]:[\\/]")
+
+
+def _walk_strings(obj, path="$"):
+    """递归遍历 JSON 里的所有字符串值。"""
+    if isinstance(obj, str):
+        yield path, obj
+    elif isinstance(obj, dict):
+        for k, v in obj.items():
+            yield from _walk_strings(v, f"{path}.{k}")
+    elif isinstance(obj, list):
+        for i, v in enumerate(obj):
+            yield from _walk_strings(v, f"{path}[{i}]")
+
 
 def main() -> int:
     problems: list[str] = []
@@ -50,6 +66,11 @@ def main() -> int:
         for route in mod.get("routes") or []:
             if not isinstance(route, dict) or not route.get("intent"):
                 problems.append(f"{name}: routes 里有缺 intent 的条目")
+        # 清单必须与机器无关：任何盘符路径都会让别人的机器装到错误位置
+        for where, val in _walk_strings(mod):
+            m = DRIVE_PATH.search(val)
+            if m:
+                problems.append(f"{name}: {where} 含本机绝对路径 {val[:60]!r}")
 
     for dirpath, dirnames, filenames in os.walk(ROOT):
         dirnames[:] = [x for x in dirnames if x not in {"__pycache__", ".git"}]

@@ -70,7 +70,7 @@
   "requires_review": false,
   "detection": {
     "confidence": "manual",
-    "evidence": "本机 D:/app/spss/stats.exe（27.0.1.0），带 production-1.2.xsd 与 spss-output-1.6.xsd",
+    "evidence": "本机 IBM SPSS Statistics 27.0.1.0 实测，带 production-1.2.xsd 与 spss-output-1.6.xsd",
     "notes": [
       "不打包 SPSS，只提供调用方式与纪律。",
       "直接 stats.exe foo.sps 会弹 GUI 挂住；必须走生产作业 stats.exe -production silent job.spj。"

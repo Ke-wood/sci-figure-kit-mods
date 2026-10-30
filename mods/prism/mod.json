@@ -63,7 +63,7 @@
   "requires_review": false,
   "detection": {
     "confidence": "manual",
-    "evidence": "本机 D:/app/prism/prism.exe（10.6.1）；Project1.prism 模板端到端实测：7 组 one-way ANOVA + Tukey，F/p/CI/校正 p 与 scipy+statsmodels 完全一致",
+    "evidence": "本机 GraphPad Prism 10.6.1 端到端实测：Project1.prism 模板，7 组 one-way ANOVA + Tukey，F/p/CI/校正 p 与 scipy+statsmodels 完全一致",
     "notes": [
       "只做分析：图样式是二进制、脚本改不了，出图交给 cnsplots / ggplot2。",
       "**Prism 只出数不出图**，模板里不需要图，建模板只要一张表 + 一个分析。",

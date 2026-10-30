@@ -17,8 +17,7 @@
   },
   "install": {
     "import_name": "ggpubfigs",
-    "pkg": "ggpubfigs",
-    "lib": "D:/app/R/library"
+    "pkg": "ggpubfigs"
   },
   "routes": [
     {
