@@ -370,28 +370,41 @@ Get-Process stats -ErrorAction SilentlyContinue
 
 ---
 
-## 7. 本机实测记录（可复现）
+### 7. 本机实测记录（可复现）
 
-| 探测 | 命令要点 | 结果 |
-|---|---|---|
-| Prism 安装位置 | `Get-ChildItem -Filter prism.exe -Recurse -Depth 3` | `D:\app\prism\prism.exe`（80,420,120 B） |
-| SPSS 安装位置 | 同上，`stats.exe` | `D:\app\spss\stats.exe`（359,080 B） |
-| SPSS 命令规格数 | `(Get-ChildItem syntax_xml -Filter *.xml).Count` | **328**，与现有 docs 一致 |
-| `.spj` schema 代际 | `Get-ChildItem *.xsd` | `production-1.0~1.4`、`spss-output-1.4~1.8` 全在 |
-| `outputFormat` 枚举 | 正则抽 `production-1.4.xsd` | **11 种** |
-| `imageFormat` 枚举 | 同上 | **6 种** |
-| Prism schema | `PrismXMLSchema.xml` | 13,460 B，`TableType` 8 值枚举 |
-| Prism 方程库 | `Equations\*.pzt` | 18 族 + `order.txt` |
-| Prism 示例脚本 | `SampleScripts\*.pzc` | 2 个（`Monte Carlo`、`Repeatedly Import`），证实 `ForEach`/`Regenerate`/`WTable` 用法 |
-| **`.pzfx` 解析** | **Python `xml.etree`，8 个样本** | **8/8 成功；命名空间 4 有 2 无；`OneWay`×6 + `XY`×1** |
-| `.pzfx` 数值格式 | 同上，全文件 `<d>` 计数 | **691 逗号 / 5825 点，同文件内并存**（不能一刀切替换） |
-| `.pzfx` `Template` | 读原文注释 | `Analyses, graphs and layouts as compressed binary` |
-| `PROBIT` 参数 | 读 `PROBIT.xml` 全文 | `PRINT` 子命令含 **`CI`** |
-| SPSS Python 模块 | `Python3\Lib\site-packages\spss*` | 4 模块齐备 |
+| 探测 | 命令要点 | 结果 | 等级 |
+|---|---|---|---|
+| Prism 安装位置 | 查注册表 Uninstall `InstallLocation` | `D:\app\prism\prism.exe`（80,420,120 B，10.6.1.892） | 只读 |
+| SPSS 安装位置 | 同上 | `D:\app\spss\stats.exe`（359,080 B，27.0.1） | 只读 |
+| SPSS 命令规格数 | `(gci syntax_xml -Filter *.xml).Count` | **328**，与现有 docs 一致 | 只读 |
+| `.spj` schema 代际 | `production-1.0~1.4`、`spss-output-1.4~1.8` | 全在 | 只读 |
+| `outputFormat` 枚举 | 正则抽 `production-1.4.xsd` | **11 种** | 只读 |
+| `imageFormat` 枚举 | 同上 | **6 种** | 只读 |
+| Prism schema | `PrismXMLSchema.xml` | 13,460 B，`TableType` 8 值枚举 | 只读 |
+| Prism 方程库 | `Equations\*.pzt` | 18 族 + `order.txt`；ASCII 串里 `Hill`×182、`EC50`×412，**无 `probit`** | 只读 |
+| Prism 示例脚本 | `SampleScripts\*.pzc` | 2 个，证实 `ForEach`/`Regenerate`/`WTable` | 只读 |
+| **`.pzfx` 解析** | Python `xml.etree`，8 个样本 | 8/8 成功；**命名空间 6 有 2 无** | 只读 |
+| `.pzfx` 数值格式 | 全文件 `<d>` 计数 | **691 逗号 / 5825 点，同文件内并存** | 只读 |
+| `.pzfx` `Template` | 读原文注释 | `Analyses, graphs and layouts as compressed binary` | 只读 |
+| `PROBIT` 参数 | 读 `PROBIT.xml` 全文 | `PRINT` 含 **`CI`/`FREQ`/`RMP`/`PARALL`** | 只读 |
+| SPSS Python 模块 | `Python3\Lib\site-packages\spss*` | `spss`/`spssdata`/`spssaux`/`SpssClient` 4 模块，Python **3.8.2** | 只读 |
+| **`prism.exe /?`** | 3 s 硬超时 | **挂 GUI，强杀** | **运行** |
+| **`.pzfx → .prism`** | `Open`+`Save`+`Exit` | **rc=0，5.8 s，出 10,087 B `.prism`** | **运行** |
+| **`prism.exe @pzc` 正常路径** | 改包后 `ExportTable` | **rc=0，3.9 s，注入值原样导出** | **运行** |
+| **SPSS PROBIT 生产作业** | `-production silent job.spj` | **rc=0，21 s 自行退出，OXML 52,531 B 含 `Confidence Limits`** | **运行** |
+| **LC50 数值** | 解析 OXML `number` | **0.10196，CI [0.03509, 0.18625]**（P=0.05 行） | **运行** |
+| **PROBIT 加权警告** | 读 `out_probit.txt` | 「加权不适用于 PROBIT，因此忽略个案权重」 | **运行** |
+| COM `SPSS.Application16` | 查 `HKLM\SOFTWARE\Classes` | 键在 | 只读 |
+| COM `Prism.Application` | 查三处 Classes 键 | **全不存在**（印证现有 docs 的「无 COM」） | 只读 |
+| `spssaux` 输出辅助 | 读 `spssaux.py` 符号 | `createXmlOutput()`、`getValuesFromXmlWorkspace()` 存在 | 只读 |
 
 ### 环境限制（影响本报告可信度，需 lead 知晓）
-1. **`web_search` 工具全程不可用**（`DeepSeek search request failed: TypeError: fetch failed`，端点 `http://127.0.0.1:3425/v1/messages`）。
-   替代方案：用 `web_fetch` 直抓官方文档页（graphpad.com 与 ibm.com 均可达），并抓 `cn.bing.com` 搜索结果页确认无更权威来源。
-   → **「网络查证」实为「4 次 web_fetch 官方文档 + 2 次 Bing 页」**，不是 4 次 `web_search`。
-2. `[System.Xml.Linq.XDocument]` 在本机 PowerShell 不可用（TypeNotFound），改用 Python。
-3. 未启动任何商业软件，运行时行为一律未验证。
+1. **`web_search` 全程不可用**（`DeepSeek search request failed: TypeError: fetch failed`，端点 `http://127.0.0.1:3425/v1/messages`）。
+   本版共尝试 3 次全部失败。替代：`web_fetch` 直抓官方文档页。
+2. **`web_fetch` 两次 404**（`graphpad.com/guides/.../prism_scripting_commands.htm`、`/support/faq/prism-scripting-commands/`）；
+   `duckduckgo.com` 被解析策略拒（non-public IP）。→ **本文档引用保留第一版抓到的 graphpad/ibm 链接，
+   但第二版无法独立复核这些页面**，故凡依赖网页的结论一律标【文档】而非【实测】。
+3. `[System.Xml.Linq.XDocument]` 在本机 PowerShell 不可用（TypeNotFound），改用 Python / `System.IO.Compression`。
+4. 首轮 SPSS 作业用 `WaitForExit(60000)` 未见退出、强杀后仍有产物；**复盘判定为启动开销导致等待预算不足**
+   （同 job 换 150 s 预算 → 21 s 自行 rc=0 退出）。若在小机器上仍遇长驻，用「产物出现 + `taskkill`」兜底。
+5. 未验的仍是未验：`imageFormat` 出图、`symbol` 传参、`.prism` 改包的错误形态、`outputFormat=excel`。
