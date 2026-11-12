@@ -29,7 +29,7 @@
 
 ## 1. 一句话结论
 
-**建议新增 2 个 mod，并给现有 2 个 mod 各打一批补丁。** 关键判断：**真正被低估的不是「再多几个统计命令」，而是 `.pzfx` 这个开放格式、`.prism` 的 zip 可构造性，以及「PROBIT 其实进 OXML」这条被现有 docs 写反的事实**。
+**建议新增 3 个 mod（1 个可选），并给现有 2 个 mod 各打一批补丁。** 关键判断：**真正被低估的不是「再多几个统计命令」，而是 `.pzfx` 这个开放格式、`.prism` 的 zip 可构造性，以及「PROBIT 其实进 OXML」这条被现有 docs 写反的事实**。
 
 | 动作 | id / 对象 | 一句话 | 证据等级 |
 |---|---|---|---|
@@ -244,7 +244,7 @@ OXML 里的 pivotTable（UTF-8 解码后）：
 | `prism.exe /?` | **启动 GUI 并挂住**，3 s 后强杀。确认「任何非 `@脚本` 调用都会弹 GUI」 |
 | `prism.exe @job.pzc`（正常脚本） | rc=0，4～6 s，无窗口，自动退出 |
 | `.pzc` 编码 | 按 **GBK(936)** 写盘，ASCII 路径；与现有 docs 一致 |
-| 后台残留 | 曾见 `BDY-Prism10-Win64-OFFLINE` 进程，`taskkill` 后消失；**下次跑前应一并清** |
+| 后台残留 | 曾见 `BDY-Prism10-Win64-OFFLINE` 进程。**查明它是用户登录自启**（启动文件夹，父进程 `explorer.exe`，早于本次测试），**不是 Prism 脚本残留，不要杀** |
 
 ### 3.6 SPSS 其余接口（承接 3.2）
 
@@ -303,7 +303,7 @@ XSD 有 `<xs:element name="symbol">`，属性 `name`（必填）、`quote`（必
 | `mods/prism/docs.md` | 补「模板可脚本化」：`Open .pzfx`+`Save .prism` 即可出模板；`.prism` 内层 `data.csv` 可直接改 | **【实测·运行】** §3.4 |
 | `mods/prism/docs.md` | 补官方死线「脚本不能新建分析，只能 `DuplicateFamily` / `RecalcAll`」 | 【文档】creating_new_sheets |
 | `mods/prism/reference/commands.md` | `CloseScriptDialog`、`SetScriptDialogTitle`、`WTBlock`；`Import` 的 `col=-1` 语义 | 【实测·只读】RTF +【文档】 |
-| `mods/prism/docs.md` | 运行纪律补录：`prism.exe /?` 会挂 GUI；跑前顺带清 `BDY-Prism10-Win64-OFFLINE` | **【实测·运行】** §3.5 |
+| `mods/prism/docs.md` | 运行纪律补录：`prism.exe /?` 会挂 GUI；超时 `taskkill /IM prism.exe /F` 即可（**不要**去杀 `BDY-Prism10-Win64-OFFLINE`，那是用户自启的许可/后端常驻进程） | **【实测·运行】** §3.5 |
 
 ---
 
@@ -321,6 +321,9 @@ XSD 有 `<xs:element name="symbol">`，属性 `name`（必填）、`quote`（必
 | **把 `.pzt` 方程库转成 Python** | 二进制 + 有版权；4PL/Michaelis-Menten/指数都有现成公式，`scipy.optimize.curve_fit` 即可。收益 < 成本。 |
 | **把 SPSS 328 条命令全做成 mod** | 现有 `reference/commands.md` + `syntax_xml/` 已够查；做成 mod 只是换地方放文档。 |
 | **用 SPSS 替代 R/Python 做通用统计** | 用户方向是生态毒理 × 网络毒理，主力应是 R/Python 生态。商业软件桥只在「**对方要 Prism/SPSS 的原生结果**」或「**该能力只有它有**」时才成立。 |
+| **用 Prism 做 probit / LC50** | **【实测·只读】** 本机 `Equations\*.pzt` 全库 ASCII 串里 `Hill`×182、`EC50`×412，**`probit`/`PBT` 一条都没有**。Prism 的剂量反应是 Hill 族，不是 probit。LC50 归 SPSS `PROBIT` 或 R `drc`。 |
+| **让 Prism/SPSS 当网络毒理（PPI）主力** | 两者都无网络分析过程；现有 `network-tox` mod（`ppi_network.py`）已覆盖，且图必须交给 cgraph/ggplot2。**商业软件在这里零价值**。 |
+| **把 OXML 当唯一结果通道（放弃 TEXT）** | OXML 拿数值好，但 `Warnings`（如「加权不适用于 PROBIT」）在 **`.txt`/日志**里更好读。两条通道**并存**，别二选一。 |
 
 ---
 
