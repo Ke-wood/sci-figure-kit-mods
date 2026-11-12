@@ -65,7 +65,8 @@
   "docs": "docs.md",
   "templates": [
     "templates/spss_run.py",
-    "templates/spss_py.py"
+    "templates/spss_py.py",
+    "templates/spss_ooxml.py"
   ],
   "requires_review": false,
   "detection": {

@@ -58,7 +58,8 @@
   "docs": "docs.md",
   "templates": [
     "templates/prism_analyze.py",
-    "templates/prism_run.py"
+    "templates/prism_run.py",
+    "templates/prism_results.py"
   ],
   "requires_review": false,
   "detection": {

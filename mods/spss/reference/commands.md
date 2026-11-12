@@ -46,7 +46,7 @@
 | `REGRESSION` | 线性回归 | `REGRESSION /DEPENDENT=y /METHOD=ENTER x1 x2 /STATISTICS=COEFF OUTS R ANOVA.` |
 | `LOGISTIC REGRESSION` | 逻辑回归 | `LOGISTIC REGRESSION VARIABLES=y /METHOD=ENTER x /PRINT=CI(95).` |
 | `NOMREG` | 多项/有序 logit | `NOMREG y BY g WITH x /PRINT=FIT PARAMETER.` |
-| `PROBIT` | **概率单位法 / LC50** | `PROBIT deaths OF total WITH dose /MODEL=PROBIT /PRINT=NONE.`（连续剂量用 `WITH`，别用 `BY`） |
+| `PROBIT` | **概率单位法 / LC50** | `PROBIT deaths OF total WITH dose /MODEL=PROBIT /PRINT=CI.`（连续剂量用 `WITH`，别用 `BY`；**`/PRINT=CI` 不能省**，见下方「PROBIT 与 OXML」） |
 | `NLR` | 非线性回归（剂量反应） | `NLR y /PRED=… /PARAMETERS=… /CRITERIA=…` |
 | `CURVEFIT` | 曲线拟合 | `CURVEFIT /VARIABLES=y WITH x /MODEL=LINEAR QUADRATIC.` |
 | `QUANTILE REGRESSION` | 分位数回归 | `QUANTILE REGRESSION y WITH x /QUANTILES=0.5.` |
@@ -98,4 +98,48 @@
 
 - **Tukey / Dunnett / Dunn**：SPSS 27 拿不到（`ADJ()` 只有 Bonferroni/LSD/Šidák），走 `prism` mod。
 - **显著性字母（CLD）**：SPSS 没有原生输出，要自己按对比结果算。
-- **PROBIT 不进 OXML**：只有备注/警告/数据信息，LC50 数值要从日志或 HTML 里解析。
+
+## PROBIT 与 OXML（实测更正）
+
+> 旧版本这里写着「PROBIT 不进 OXML，LC50 要从日志或 HTML 解析」。**这是错的**，
+> 2026-11-12 用生产作业实测推翻：`PROBIT` 的输出**完整进 OXML**。
+
+实测（`stats.exe -production silent`，`OMS /DESTINATION FORMAT=OXML`）拿到六张 pivotTable：
+`Notes` / `Data Information` / `Convergence Information` / `Parameter Estimates` /
+`ChiSquareTests` / **`Confidence Limits`**（外加一张概率转换图 `chartTitle`）。
+
+以本机 27.0.1 的一次 5 剂量 / 二项数据实测，LC50 点位：
+
+| 项 | text（显示值） | number（全精度） |
+|---|---|---|
+| LC50 | 2.626 | `2.6261536612025` |
+| 95% 下限 | 1.705 | `1.7050135365051` |
+| 95% 上限 | 4.058 | `4.0582517808482` |
+
+同一张表还直出 LC01 = `0.037741234420054`、LC99 = `182.73602223734`，概率档覆盖 .010–.990。
+用参数估算值（斜率 1.262601238413、截距 -0.52943412033591）手算 LC50 = 2.626153661203，
+与表内 `number` 完全吻合 —— 所以这条路线的数值可信。
+
+对应语法（**`/PRINT=CI` 不能省**）：
+
+```spss
+OMS /SELECT ALL /DESTINATION FORMAT=OXML OUTFILE='<ascii 路径>/out.xml'.
+PROBIT deaths OF total WITH dose /MODEL=PROBIT /PRINT=CI.
+OMSEND.
+```
+
+### 三个会让你误判的细节（实测踩到）
+
+1. **`/PRINT=NONE` 不是"零置信区间"。** 它仍会输出 2 处「95% 置信区间 + 下限/上限」，
+   那是 `Parameter Estimates` 表里**斜率与截距的 Wald CI**（实测 1.263 [0.991, 1.534]、
+   −.529 [−.660, −.398]）。**靠搜「置信」判断 CI 表在不在，结论会完全反过来。**
+   要锚定 `pivotTable[@subType="Confidence Limits"]`，或看概率档 `number="0.5"` 是否出现
+   （实测：NONE 中 0 次、CI 中 1 次）。
+2. **表名随语言/版本变。** 简中版叫「**置信限度**」而不是「置信区间」；判定别锚定显示文本。
+3. **`LC50` 字面串在 OXML 里出现 0 次。** 别搜 "LC50"，用概率档 `number="0.5"` 定位。
+
+取数铁律：每格同时有 `number`（全精度）与 `text`（显示值、已舍入），**要数字就读 `number`**。
+OXML 可能写一半就断（挂死/超时），解析前先校验 `</outputTree>`，残缺按硬错误处理。
+
+以上都已固化进 `templates/spss_ooxml.py`：`--list` 会标出有没有 Confidence Limits 表，
+`--lc 0.5` 直接给点估计与 CI。

@@ -96,8 +96,11 @@ with spssdata.Spssdata() as data:
    （`syntaxErrorHandling="stop"` 会停在出错那条）。
 3. **OXML 可能只写一半。** 挂死时会留下几 KB 的残文件 —— 解析前先校验
    `</outputTree>` 是否存在，残缺就当硬错误。
-4. **PROBIT 的结果不进 OXML**（只有备注/警告/数据信息），LC50 要从日志/HTML 解析，
-   或者改用能进 OXML 的 `UNIANOVA`/`DESCRIPTIVES` 路线。
+4. **PROBIT 的结果进 OXML —— 前提是别把表关掉。** 旧版这里写「不进 OXML」是错的
+   （2026-11-12 生产作业实测推翻）：`/PRINT=CI` 时 OXML 里 `Confidence Limits` 表
+   直接给 LC50 与 95% CI，读 `number` 属性即得全精度值。写成 `/PRINT=NONE` 才会
+   "只剩备注"——那不是 SPSS 的限制，是自己关掉了要的那张表。
+   完整四张表清单见 `reference/commands.md` 的「PROBIT 与 OXML」。
 
 ## 读 OXML 的三个要点
 
@@ -113,9 +116,36 @@ with spssdata.Spssdata() as data:
 python templates/spss_run.py --sps analysis.sps --workdir C:/tmp/spss_run --timeout 300
 ```
 
-## 已验证（2026-10-23，本机 27.0.1 @ {root}/spss）
+`templates/spss_ooxml.py`：**把 OXML 解析成 tidy 表**。`spss_run.py` 只负责"跑出 OXML"，
+但 OXML 本身是 `pivotTable` 套 `dimension` 套 `category` 的树，每次现写解析都要重踩
+「number vs text」「缺失值」「残文件」这几个坑。这个脚本一次搞定：
+
+```powershell
+&#35; 有哪些表（标出 subType，并提示有没有 Confidence Limits 表）
+python "<skill>/mods/spss/templates/spss_ooxml.py" --list out.xml
+
+&#35; LC50 点估计 + 95% CI（默认概率 0.5；要 LC10 就 --lc 0.1）
+python "<skill>/mods/spss/templates/spss_ooxml.py" --xml out.xml --lc 0.5
+
+&#35; 某张表导 TSV / 全部倒扁平 JSON
+python "<skill>/mods/spss/templates/spss_ooxml.py" --xml out.xml --table "Parameter Estimates" --tsv param.tsv
+python "<skill>/mods/spss/templates/spss_ooxml.py" --xml out.xml --json all.json
+```
+
+两个内建判断值得知道：
+
+- **残文件当硬错误**：解析前校验 `</outputTree>`，截断文件直接返回非 0，
+  不会给你一张"看似正常却全空"的表。
+- **LC 置信表按 `subType` 认，不按标题文本**：简中版叫「置信限度」，
+  且 `Parameter Estimates` 里也有「95% 置信区间」字样 —— 搜文本会误判。
+
+## 已验证（2026-10-23 / 2026-11-12，本机 27.0.1 @ {root}/spss）
 
 - 生产作业跑通：`DESCRIPTIVES` 产出 OXML，`number="13.833333333333"` 与
   `text="13.8333"` 都在，6 行数据、均值 13.8333 与源表一致；
 - `syntaxPath` 写错的坑实测复现（元素文本写法 → 作业"成功"但零产物）；
 - 超时强杀路径已实现（未触发）。
+- **PROBIT 进 OXML（2026-11-12 实测）**：`/PRINT=CI` 时 LC50 = `2.6261536612025`，
+  95% CI = [`1.7050135365051`, `4.0582517808482`]，同表还直出 LC01/LC99。
+  `/PRINT=NONE` 会整张少掉 `Confidence Limits` 表（210 个数值）。
+  详见 `reference/commands.md` 的「PROBIT 与 OXML」。

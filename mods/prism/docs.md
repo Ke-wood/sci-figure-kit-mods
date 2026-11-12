@@ -94,3 +94,22 @@ content.ordinaryAnovaModel
 
 `templates/prism_run.py`：只跑一个现成的 `.pzc`（带静态检查、GBK 落盘、超时强杀、产物清单）。
 需要"脚本里干别的事"（批量、导出数据表）时用它。
+
+`templates/prism_results.py`：**通用取数**。`prism_analyze.py` 只认单因素 ANOVA 的字段
+（`ordinaryAnovaModel` 等），换个分析（剂量反应、t 检验、双因素）就得改代码。
+这个脚本走另一条路：递归遍历 `results.json` 整棵树，把所有数值叶子连同**路径**倒出来，
+路径本身就是语义标签，所以不必预先知道分析类型。
+
+```powershell
+&#35; 先摸结构：这个 results.json 里有哪些字段
+python "<skill>/mods/prism/templates/prism_results.py" --list results.json
+
+&#35; 只要置信区间相关
+python "<skill>/mods/prism/templates/prism_results.py" --results results.json --grep "confiden" --json picked.json
+
+&#35; 直接找某个量
+python "<skill>/mods/prism/templates/prism_results.py" --results results.json --find "ec50"
+```
+
+`.prism` 是 zip，`results.json` 在**Save 之后**才写进去（模板本身里没有）。
+`prism_analyze.py` 已自动处理这一步。
