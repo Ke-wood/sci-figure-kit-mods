@@ -361,59 +361,93 @@ def _matches(parsed, needle: str) -> bool:
 def table_to_rows(parsed):
     """一张表 → 扁平 (row_label, col_label, number, text) 列表。
 
-    这是给 `--tsv` 与 `--json` 用的统一形状：一行一个格子。
+    这是给 `--tsv` / `--json` 用的统一形状：一行一个格子。
 
-    **col_label 只能来自 position=column 的维度。** 早先把所有维度的类目
-    混在一起当列名，结果行维度（如「概率」.10/.50/.90）被当成列标签，
-    导出的 TSV 列语义整体错位 —— 下游按 col 对齐全错。实测踩过。
+    **以 records（叶子路径）为唯一来源，不再用 headers 按下标对齐。**
+    曾经的做法是把所有 column 维度的类目首尾相接当列名，再去和 cell 按下标
+    配对。真实 OXML 里列维度是分层的（`CL 类型` 2 个 × `统计` 3 个），拼平后
+    粒度与 cell 序列对不上，于是标签与数值整体错位（实测 0/6 对得上）。
+
+    同时**避免重复计数**：`parse_table` 的 rows 里会有一条"伪行"（模型的
+    PROBIT）把整棵子树的 cell 都吞进来，再叠加各概率档自己的行，结果是
+    cell 数的两倍（实测 420 vs 真实 210）。走 records 天然一叶一行，不会重复。
     """
     flat = []
-    headers = parsed.get("headers") or []
 
-    # 只取列维度（position=column）的类目作为列名。
-    # 没有标 position 的老文件退化为「非第一个维度」，但仍不混入行维度。
-    col_names = []
-    for h in headers:
-        if (h.get("position") or "").lower() == "column":
-            col_names.extend(h.get("categories") or [])
-    if not col_names and len(headers) > 1:
-        # 兜底：OXML 没写 position 时，第一组通常是行维度、其余是列维度。
-        for h in headers[1:]:
-            col_names.extend(h.get("categories") or [])
+    for rec in parsed.get("records") or []:
+        path = rec.get("path") or []
+        # 把路径拆成：行维度标签列表 + 列维度标签列表 + 统计名
+        # 真实语义：模型(行) > 概率(行) > CL 类型(列) > 统计(列)
+        cats = []
+        col_parts = []
+        stat = ""
+        for item in path:
+            if item[0] not in ("cat", "group") or len(item) < 2:
+                continue
+            lab = str(item[1] or "")
+            cats.append(lab)
+        if not cats:
+            continue
+        stat = cats[-1]
+        row_label = " | ".join(cats[:-1]) if len(cats) > 1 else cats[0]
+        # 列标签：CL 类型 + 统计名（两者都是列维度语义）
+        if len(cats) >= 3:
+            col_parts = cats[-3:-1]
+        elif len(cats) >= 2:
+            col_parts = cats[:-1]
+        col_label = " | ".join(col_parts + [stat]) if col_parts else stat
 
-    for r in parsed.get("rows") or []:
-        row_label = " | ".join(r.get("labels") or [])
-        for i, cell in enumerate(r.get("cells") or []):
-            col_label = col_names[i] if i < len(col_names) else f"c{i}"
+        nums = rec.get("numbers") or []
+        txts = rec.get("texts") or []
+        for i, n in enumerate(nums):
             flat.append({
                 "table": parsed.get("title") or "",
                 "row": row_label,
                 "col": col_label,
-                "number": cell.get("number"),
-                "text": cell.get("text"),
+                "number": n,
+                "text": txts[i] if i < len(txts) else None,
             })
 
-    # 真实 OXML（SPSS 27）里 `<dim>` 出现 **0 次**，数值直接是
-    # `<category><cell/></category>` 的嵌套结构 —— 只走上面的 rows 会得到空表
-    # （实测 --tsv 只有表头就是这个原因）。所以这里再从 records 摊平一遍。
+    # 老结构（真有 <dim> 行的文件）才走 rows；records 为空说明是这种。
     if not flat:
-        for rec in parsed.get("records") or []:
-            path = rec.get("path") or []
-            # 行标签：路径里前若干个 cat 的显示名（去掉最后一级统计名）
-            cats = [str(it[1] or "") for it in path if it[0] in ("cat", "group")]
-            stat = cats[-1] if cats else ""
-            row_label = " | ".join(cats[:-1]) if len(cats) > 1 else (cats[0] if cats else "")
-            nums = rec.get("numbers") or []
-            txts = rec.get("texts") or []
-            for i, n in enumerate(nums):
+        headers = parsed.get("headers") or []
+        col_names = []
+        for h in headers:
+            if (h.get("position") or "").lower() == "column":
+                col_names.extend(h.get("categories") or [])
+        if not col_names and len(headers) > 1:
+            for h in headers[1:]:
+                col_names.extend(h.get("categories") or [])
+        for r in parsed.get("rows") or []:
+            row_label = " | ".join(r.get("labels") or [])
+            for i, cell in enumerate(r.get("cells") or []):
+                col_label = col_names[i] if i < len(col_names) else f"c{i}"
                 flat.append({
                     "table": parsed.get("title") or "",
                     "row": row_label,
-                    "col": stat or f"c{i}",
-                    "number": n,
-                    "text": txts[i] if i < len(txts) else None,
+                    "col": col_label,
+                    "number": cell.get("number"),
+                    "text": cell.get("text"),
                 })
     return flat
+
+
+def flat_row_count_ok(parsed, flat) -> str:
+    """自检：导出行数应等于该表原始 `<cell>` 数。不等就返回告警文本。
+
+    这个检查是为一个真实 bug 加的：解析器曾把同一批 cell 报两遍
+    （伪行吞掉全部 + 各概率档再来一遍），420 行 vs 真实 210 个 cell，
+    表面看不出问题，只有对账才发现。以后任何重复计数都能被它挡住。
+    """
+    recs = parsed.get("records") or []
+    if not recs:
+        return ""  # 老结构没法这么对账，跳过
+    expect = sum(len(r.get("numbers") or []) for r in recs)
+    got = len(flat)
+    if got == expect:
+        return ""
+    return (f"！行数与 cell 数不符：导出 {got} 行，但表里只有 {expect} 个 cell"
+            f"（{parsed.get('title') or parsed.get('subType')}）——疑似重复计数。")
 
 
 def write_tsv(rows, path):
@@ -734,6 +768,12 @@ def main() -> int:
         # 早先这里直接 return 0，导致 combo 时文件静默不写，用户以为写成功了。
         if not args.tsv and not args.json_out:
             return 0
+
+    # 写盘前先对账：行数与真实 cell 数不符就告警（见 flat_row_count_ok 的说明）
+    if selected is not None:
+        warn = flat_row_count_ok(selected, rows)
+        if warn:
+            print(warn, file=sys.stderr)
 
     if args.tsv:
         write_tsv(rows, args.tsv)
