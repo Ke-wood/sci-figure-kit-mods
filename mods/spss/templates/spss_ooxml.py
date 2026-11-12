@@ -615,6 +615,10 @@ def extract_lc(tables, p: float = 0.5):
             if kind in got and got[kind] is None:
                 got[kind] = item["number"]
         if all(v is not None for v in got.values()):
+            # 注意 `cl_type` 里的「95%」是**置信水平**，与 probability 不是一回事：
+            # probability=0.5 指的是 LC50 这个概率档，95% 指的是 CI 的水平。
+            # 两者同时出现（"dose 的 95% 置信限度" + probability 0.5）不矛盾，
+            # 那是 SPSS 原表的列名，照抄不改。
             return {
                 "table": target.get("title"),
                 "subType": target.get("subType"),
