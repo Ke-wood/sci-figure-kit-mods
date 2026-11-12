@@ -684,6 +684,11 @@ def extract_lc(tables, p: float = 0.5):
             "upper": upper,
             "column_labels": col_labels,
             "all_numbers": nums,
+            # 老结构分支同样要做顺序自检：它比 records 分支更容易串值
+            # （列标签是按下标硬配的，粒度对不上就会错位）。
+            # 少了这个键，调用方拿不到告警，等于这条路径完全没有保护。
+            "ordered_ok": _ci_ordered(lower, point, upper),
+            "source": "rows",
         }
     return None
 
