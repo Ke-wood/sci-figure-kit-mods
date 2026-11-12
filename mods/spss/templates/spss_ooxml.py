@@ -84,20 +84,13 @@ def load_ooxml(path: str):
 
 # ---------------------------------------------------------------- 表结构
 
-def _dimensions(table):
-    """pivotTable → (行维度名列表, 列维度名列表)。"""
-    row_dims, col_dims = [], []
-    for dim in table.iter():
-        if local_name(dim) != "dimension":
-            continue
-        name = dim.get("name") or dim.get("label") or ""
-        pos = (dim.get("position") or "").lower()
-        if pos == "column":
-            col_dims.append(name)
-        else:
-            # OXML 里没有 position 或缺省时，按行维度处理（最常见）。
-            row_dims.append(name)
-    return row_dims, col_dims
+# 注：这里原先有个 `_dimensions()`，按 `position` 属性分行/列维度。它被删掉了，
+# 原因有两条：
+#   1. 真实 OXML（SPSS 27）用的是 `axis="row"/"column"`，根本没有 `position` ——
+#      这个函数看着能跑，实际把所有维度都判成行维度，是列语义错位的源头。
+#   2. `parse_table()` 已改为在遍历时按 `axis` 或 `position` 一次性分好，
+#      再保留一个口径不同的副本只会让后来的人改错地方。
+# 别再把它加回来；要动维度判定就改 `parse_table()` 里那处。
 
 
 def _category_label(cat) -> str:
