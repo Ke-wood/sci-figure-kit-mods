@@ -497,6 +497,21 @@ def _num_eq(a: str, b: float) -> bool:
         return False
 
 
+def _ci_ordered(lower, point, upper) -> bool:
+    """置信区间的基本物理约束：lower <= point <= upper。
+
+    这是防"静默返回错值"的最后一道闸。真实踩过：解析器把 lower/upper
+    串到 log(dose) 分支，给出 lower=0.3728 > upper=0.2557 —— 一个物理上
+    不可能的结果，却因为函数正常返回而没人发现。有了这条，
+    调用方读到 ordered_ok=false 就知道该停下来查，而不是直接拿去用。
+    """
+    try:
+        lo, po, up = float(lower), float(point), float(upper)
+    except (TypeError, ValueError):
+        return False
+    return lo <= po <= up
+
+
 # 列维度类目名的语义识别：不同语言/版本写法不同，靠关键词归类。
 # **「估算」必须在内。** SPSS 简中把点估计那一列写作「估算」（不是"点估计"、
 # 也不是"估计"）。漏了它会让 _classify 返回 unknown → records 分支整段放弃
@@ -609,6 +624,7 @@ def extract_lc(tables, p: float = 0.5):
                 "upper": got["upper"],
                 "cl_type": want_prob[0]["cl_type"],
                 "source": "records",
+                "ordered_ok": _ci_ordered(got["lower"], got["point"], got["upper"]),
             }
 
     # ---- 兜底：老结构（平铺 rows）
@@ -753,6 +769,12 @@ def main() -> int:
                   file=sys.stderr)
             return 2
         print(json.dumps(got, ensure_ascii=False, indent=2))
+        if got.get("ordered_ok") is False:
+            print("! 置信区间顺序异常：应当 lower <= point <= upper，实际不成立。\n"
+                  "  这通常意味着数值串到了别的分支（例如 log(dose) 的 CL）。\n"
+                  "  请用 --list 核对表结构，不要直接使用这三个数。",
+                  file=sys.stderr)
+            return 3
         return 0
 
     if args.find:
