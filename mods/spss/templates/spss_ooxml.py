@@ -142,17 +142,24 @@ def parse_table(table):
     """
     title = table.get("label") or table.get("name") or ""
     sub_type = table.get("subType") or table.get("subtype") or ""
-    row_dims, col_dims = _dimensions(table)
 
-    # 顶部维度（列标题）：取每个 dimension 下的 category 标签
+    # 行/列维度必须分开取：**列名只能来自 position=column 的维度**。
+    # 曾经把所有维度的类目混在一起当列名，于是行维度（如「概率」.10/.50/.90）
+    # 被当成列标签，导出的 TSV 列语义整体错位 —— 下游按 col 对齐全错。
     headers = []
+    col_categories = []
     for dim in table.iter():
         if local_name(dim) != "dimension":
             continue
+        pos = (dim.get("position") or "").lower()
         cats = [_category_label(c) for c in dim if local_name(c) == "category"]
-        if cats:
-            headers.append({"dimension": dim.get("name") or "",
-                            "categories": cats})
+        if not cats:
+            continue
+        headers.append({"dimension": dim.get("name") or "",
+                        "position": pos or "row",
+                        "categories": cats})
+        if pos == "column":
+            col_categories.extend(cats)
 
     rows = []
     for row in table.iter():
@@ -173,8 +180,6 @@ def parse_table(table):
             cells.append({"number": num, "text": txt})
         if not cells and not labels:
             continue
-        # 前 len(labels) 个当行标签，其余当值（OXML 里 often 混在一起，
-        # 这里保留两类信息，交给调用方按 headers 对齐）
         rows.append({"labels": labels, "cells": cells})
 
     return {
