@@ -140,38 +140,55 @@ def parse_table(table):
     也有「95% 置信区间 / 下限 / 上限」字样 —— 靠搜「置信」判断 CI 表是否存在，
     会在 `/PRINT=NONE` 时得出**完全相反**的结论。见 `has_lc_confidence()`。
     """
-    title = table.get("label") or table.get("name") or ""
+    title = table.get("label") or table.get("text") or table.get("name") or ""
     sub_type = table.get("subType") or table.get("subtype") or ""
 
-    # 行/列维度必须分开取：**列名只能来自 position=column 的维度**。
+    # 行/列维度必须分开取：**列名只能来自列方向的维度**。
     # 曾经把所有维度的类目混在一起当列名，于是行维度（如「概率」.10/.50/.90）
     # 被当成列标签，导出的 TSV 列语义整体错位 —— 下游按 col 对齐全错。
+    #
+    # 方向属性的名字随版本变：实测 SPSS 27 的 OXML 用 **axis="row"/"column"**，
+    # 而早期样例/文档里见过 position="row"/"column"。两个都要认，否则
+    # col_categories 恒为空、导出表没有列标签（实测踩到：cl.tsv 只有表头）。
     headers = []
     col_categories = []
     for dim in table.iter():
         if local_name(dim) != "dimension":
             continue
-        pos = (dim.get("position") or "").lower()
+        pos = (dim.get("axis") or dim.get("position") or "").lower()
         cats = [_category_label(c) for c in dim if local_name(c) == "category"]
         if not cats:
             continue
-        headers.append({"dimension": dim.get("name") or "",
+        headers.append({"dimension": dim.get("name") or dim.get("text") or "",
                         "position": pos or "row",
                         "categories": cats})
         if pos == "column":
             col_categories.extend(cats)
 
     rows = []
+    # 真实 OXML（SPSS 27 实测）有两种行形态，必须都认：
+    #   ① 平铺：<dim><category/><cell/><cell/></dim>
+    #   ② 嵌套：<category number="0.5" text=".50"><dimension axis="column">…
+    #      <cell/></dimension></category> —— Confidence Limits 表就是这种，
+    #      列维度嵌在概率档 category 内部。只遍历 <dim> 会一行都取不到
+    #      （实测 cl.tsv 只有表头，就是这个原因）。
     for row in table.iter():
         if local_name(row) != "dim":
             continue
-        # 该行的行维度标签
         labels = []
+        cat_numbers = []
         for cat in row:
             if local_name(cat) in ("category", "dim"):
                 lab = _category_label(cat)
                 if lab:
                     labels.append(lab)
+                # **保留 category 的 number 属性**：概率档显示值是 ".50"，
+                # 真正的数值判别（--lc 0.5）必须靠 number="0.5"。
+                for attr in ("number", "value"):
+                    v = cat.get(attr)
+                    if v is not None and v.strip() != "":
+                        cat_numbers.append(v.strip())
+                        break
         cells = []
         for cell in row.iter():
             if local_name(cell) != "cell":
@@ -180,7 +197,46 @@ def parse_table(table):
             cells.append({"number": num, "text": txt})
         if not cells and not labels:
             continue
-        rows.append({"labels": labels, "cells": cells})
+        rows.append({"labels": labels, "cat_numbers": cat_numbers, "cells": cells})
+
+    # 形态 ②：概率档 category 直接挂在行维度下（没有 <dim> 包裹）。
+    # 这个分支只在上面没拿到任何行时才用，避免与形态 ① 重复计数。
+    if not rows:
+        for dim in table.iter():
+            if local_name(dim) != "dimension":
+                continue
+            if (dim.get("axis") or dim.get("position") or "").lower() != "row":
+                continue
+            for cat in dim:
+                if local_name(cat) != "category":
+                    continue
+                cells = []
+                for cell in cat.iter():
+                    if local_name(cell) != "cell":
+                        continue
+                    num, txt = _cell_values(cell)
+                    cells.append({"number": num, "text": txt})
+                if not cells:
+                    continue
+                lab = _category_label(cat)
+                nums = []
+                for attr in ("number", "value"):
+                    v = cat.get(attr)
+                    if v is not None and v.strip() != "":
+                        nums.append(v.strip())
+                        break
+                rows.append({
+                    "labels": [lab] if lab else [],
+                    "cat_numbers": nums,
+                    "cells": cells,
+                })
+
+    # 维度列表从 headers 派生（上面已按 position 分好），不要再调 _dimensions()：
+    # 那个函数把行/列混在一起，正是列语义错位的根源。
+    row_dims = [h["dimension"] for h in headers
+                if (h.get("position") or "") != "column"]
+    col_dims = [h["dimension"] for h in headers
+                if (h.get("position") or "") == "column"]
 
     return {
         "title": title,
@@ -189,7 +245,68 @@ def parse_table(table):
         "column_dimensions": col_dims,
         "headers": headers,
         "rows": rows,
+        "records": _leaf_records(table),
     }
+
+
+def _is_leaf(cat) -> bool:
+    """category 是叶子吗？判据是「有没有 cell 子节点」。
+
+    真实 OXML 里 category 有两种形态：带 cell 的是数值叶子；不带 cell 的是
+    容器（其下继续套 dimension）。**不能按固定深度判断** —— Parameter
+    Estimates 是 3 层、Confidence Limits 是 4 层，深度会变。
+    """
+    for ch in cat:
+        if local_name(ch) == "cell":
+            return True
+    return False
+
+
+def _leaf_records(table):
+    """把嵌套结构摊平成 [{path:[维度名→类目标签], numbers:[...], texts:[...]}]。
+
+    这是给 `--lc` 之类"按语义找数"的调用方用的：真实结构是
+      模型 > 概率(0.5) > CL 类型(dose 的...) > 统计(估算/下限/上限) > cell
+    每一层都有意义，只取 cells 会丢掉「这是 dose 的还是 log(dose) 的」这类
+    关键区分（实测两种 CL 类型会给不同量级的两套数）。
+    """
+    records = []
+
+    def walk(node, path):
+        for ch in list(node):
+            tag = local_name(ch)
+            if tag == "dimension":
+                dim_name = ch.get("text") or ch.get("name") or ""
+                walk(ch, path + [("dim", dim_name)])
+            elif tag == "group":
+                walk(ch, path + [("group", ch.get("text") or "")])
+            elif tag == "category":
+                label = _category_label(ch)
+                num = None
+                for attr in ("number", "value"):
+                    v = ch.get(attr)
+                    if v is not None and v.strip() != "":
+                        num = v.strip()
+                        break
+                this_path = path + [("cat", label, num)]
+                if _is_leaf(ch):
+                    nums, txts = [], []
+                    for cell in ch:
+                        if local_name(cell) != "cell":
+                            continue
+                        n, t = _cell_values(cell)
+                        nums.append(n)
+                        txts.append(t)
+                    records.append({
+                        "path": this_path,
+                        "numbers": nums,
+                        "texts": txts,
+                    })
+                else:
+                    walk(ch, this_path)
+
+    walk(table, [])
+    return records
 
 
 def has_lc_confidence(tables) -> bool:
@@ -219,10 +336,17 @@ def all_tables(root):
 
 
 def _matches(parsed, needle: str) -> bool:
+    """按标题 / subType / 维度名 / 类目名匹配一张表。
+
+    **必须查 subType。** 简中版把这张表叫「置信限度」，用户照文档敲
+    `--table 'Confidence Limits'` 时标题匹配不到，但 subType 正是它 ——
+    不查 subType 就会明明有这张表却报"没有"。
+    """
     needle_l = needle.lower()
     if needle_l in (parsed.get("title") or "").lower():
         return True
-    # 也匹配维度名，方便按 "Confidence" / "Parameter" 这种词找
+    if needle_l in (parsed.get("subType") or "").lower():
+        return True
     for h in parsed.get("headers") or []:
         if needle_l in (h.get("dimension") or "").lower():
             return True
@@ -237,16 +361,26 @@ def _matches(parsed, needle: str) -> bool:
 def table_to_rows(parsed):
     """一张表 → 扁平 (row_label, col_label, number, text) 列表。
 
-    这是给 `--tsv` 与 `--json` 用的统一形状：一行一个格子，
-    row_label 取该行的行标签拼接，col_label 取表头里对应位置。
+    这是给 `--tsv` 与 `--json` 用的统一形状：一行一个格子。
+
+    **col_label 只能来自 position=column 的维度。** 早先把所有维度的类目
+    混在一起当列名，结果行维度（如「概率」.10/.50/.90）被当成列标签，
+    导出的 TSV 列语义整体错位 —— 下游按 col 对齐全错。实测踩过。
     """
     flat = []
     headers = parsed.get("headers") or []
-    # 把每个维度的类目标签拉平成一个列名列表（按出现顺序）
+
+    # 只取列维度（position=column）的类目作为列名。
+    # 没有标 position 的老文件退化为「非第一个维度」，但仍不混入行维度。
     col_names = []
     for h in headers:
-        for c in h.get("categories") or []:
-            col_names.append(c)
+        if (h.get("position") or "").lower() == "column":
+            col_names.extend(h.get("categories") or [])
+    if not col_names and len(headers) > 1:
+        # 兜底：OXML 没写 position 时，第一组通常是行维度、其余是列维度。
+        for h in headers[1:]:
+            col_names.extend(h.get("categories") or [])
+
     for r in parsed.get("rows") or []:
         row_label = " | ".join(r.get("labels") or [])
         for i, cell in enumerate(r.get("cells") or []):
@@ -258,6 +392,27 @@ def table_to_rows(parsed):
                 "number": cell.get("number"),
                 "text": cell.get("text"),
             })
+
+    # 真实 OXML（SPSS 27）里 `<dim>` 出现 **0 次**，数值直接是
+    # `<category><cell/></category>` 的嵌套结构 —— 只走上面的 rows 会得到空表
+    # （实测 --tsv 只有表头就是这个原因）。所以这里再从 records 摊平一遍。
+    if not flat:
+        for rec in parsed.get("records") or []:
+            path = rec.get("path") or []
+            # 行标签：路径里前若干个 cat 的显示名（去掉最后一级统计名）
+            cats = [str(it[1] or "") for it in path if it[0] in ("cat", "group")]
+            stat = cats[-1] if cats else ""
+            row_label = " | ".join(cats[:-1]) if len(cats) > 1 else (cats[0] if cats else "")
+            nums = rec.get("numbers") or []
+            txts = rec.get("texts") or []
+            for i, n in enumerate(nums):
+                flat.append({
+                    "table": parsed.get("title") or "",
+                    "row": row_label,
+                    "col": stat or f"c{i}",
+                    "number": n,
+                    "text": txts[i] if i < len(txts) else None,
+                })
     return flat
 
 
@@ -271,17 +426,83 @@ def write_tsv(rows, path):
             ) + "\n")
 
 
+def _cat_numbers(row):
+    """取这一行的 category number 属性（全精度字符串），按出现顺序。
+
+    **必须看 number，不能看 text。** SPSS 把概率档显示成 `.50`（带前导点），
+    拿 text 去和 "0.5" 比对永远不相等 —— `--lc 0.5` 会在明明有 CI 表时报「没找到」。
+    实测：text=".50" 的 category 其 number 是 "0.5"。
+
+    `row` 是 `parse_table()` 产出的 **dict**（不是 XML 结点），所以直接读
+    `cat_numbers`；为了兼容早期调用方/旧结构，dict 缺该键时再退回 labels 猜。
+    """
+    if isinstance(row, dict):
+        nums = row.get("cat_numbers")
+        if nums:
+            return list(nums)
+        # 没有 number 时退回 labels（.50 / 0.5 这类写法都能被 _num_eq 认）
+        return [str(x).strip() for x in (row.get("labels") or [])]
+    # 真拿到 XML 结点时按旧路径走（保持兼容）
+    out = []
+    for cat in row:
+        if local_name(cat) not in ("category", "dim"):
+            continue
+        for attr in ("number", "value"):
+            v = cat.get(attr)
+            if v is not None and v.strip() != "":
+                out.append(v.strip())
+                break
+    return out
+
+
+def _num_eq(a: str, b: float) -> bool:
+    """把 OXML 里的数字串与目标浮点比较（容忍 .50 / 0.5 / 0.500 等写法）。"""
+    try:
+        return abs(float(a) - float(b)) < 1e-9
+    except (TypeError, ValueError):
+        return False
+
+
+# 列维度类目名的语义识别：不同语言/版本写法不同，靠关键词归类。
+# **「估算」必须在内。** SPSS 简中把点估计那一列写作「估算」（不是"点估计"、
+# 也不是"估计"）。漏了它会让 _classify 返回 unknown → records 分支整段放弃
+# → 回退到旧兜底 → lower/upper 串到 log(dose) 分支去（实测下限定成 0.37）。
+_LOWER_HINTS = ("下限", "lower", "lcl", "low")
+_POINT_HINTS = ("估算", "点估计", "估计", "point", "estimate", "prob")
+_UPPER_HINTS = ("上限", "upper", "ucl", "high")
+
+
+def _classify(col_label: str) -> str:
+    """把列标签归成 lower / point / upper / unknown。"""
+    s = (col_label or "").strip().lower()
+    if not s:
+        return "unknown"
+    for h in _LOWER_HINTS:
+        if h in s:
+            return "lower"
+    for h in _UPPER_HINTS:
+        if h in s:
+            return "upper"
+    for h in _POINT_HINTS:
+        if h in s:
+            return "point"
+    return "unknown"
+
+
 def extract_lc(tables, p: float = 0.5):
     """从 Confidence Limits 表里抽某个概率档（默认 0.5 = LC50）的点估计与 CI。
 
-    实测的 OXML 形状：
+    实测的 OXML 形状（SPSS 27）：
       pivotTable[@subType='Confidence Limits']
-        └─ 行维度「概率」→ category[@number='0.5']
-        └─ 列「<剂量变量的> 95% 置信限度」→「统计」组三个 cell
-           （依次是点估计、下限、上限；带 number 属性的是全精度值）
+        └─ 行维度「概率」→ category number='0.5'（text 是 ".50"）
+        └─ 列维度「dose 的 95% 置信限度」→ 下限 / 点估计 / 上限
 
-    这里不硬编码 cell 顺序（不同 SPSS 版本可能不同），而是按行里出现的
-    category 的 number 属性找目标概率档，再取该行所有带 number 的 cell。
+    **point / lower / upper 的归属必须按列标签判定，不能按 cell 出现顺序。**
+    实测 cell 顺序在真实文件里是「下限、点估计、上限」，但按顺序硬赋会在
+    别的表/版本里错位（曾出现 point 拿到下限值的情况）。这里：
+      1. 先用列标签关键词给每个 cell 归类；
+      2. 归不出来时退回「按数值大小排」（lower ≤ point ≤ upper）作为兜底；
+    两条都尽量让语义正确，而不是"能跑就行"。
     """
     target = None
     for t in tables:
@@ -296,23 +517,122 @@ def extract_lc(tables, p: float = 0.5):
     if target is None:
         return None
 
-    want = str(p)
-    for row in target.get("rows") or []:
-        labels = row.get("labels") or []
-        # 概率档出现在行标签里（要么是 "0.5"，要么带 number 属性的 category）
-        if not any(str(x).strip() in (want, f"{p:g}", f"{p:.3f}") for x in labels):
+    # ---- 首选：按 records 的路径语义精确取数（真实结构有 4 层，见 _leaf_records）
+    # 路径形如：[('dim','模型'),('cat','PROBIT'),('dim','概率'),('cat','.50',num='0.5'),
+    #            ('dim','CL 类型'),('cat','dose 的 95% 置信限度'),
+    #            ('dim','统计'),('cat','估算'|'下限'|'上限')]
+    # 关键：同一概率档下有 **dose 的** 与 **log(dose) 的** 两套数，量级不同，
+    # 必须按路径里的 "log(" 区分，否则会拿错数。
+    recs = target.get("records") or []
+    # 只保留 dose（不是 log(dose)）那一支，且只要目标概率档。
+    #
+    # 真实路径（SPSS 27，4 层）：
+    #   dim:模型 > cat:PROBIT > dim:概率 > cat:.500(num='0.5')
+    #     > dim:CL 类型 > cat:'dose 的 95% 置信限度'
+    #       > dim:统计 > cat:'估算'|'下限'|'上限'
+    # 早期版本把「最后一个 cat」当统计名，同时又用它当 cl_type，两者互相覆盖，
+    # 于是 `log(` 判断失效、log(dose) 的数混进来（实测下限定成了 0.3728）。
+    # 这里改成按位置语义取：cl_type 取「含置信限度字样的那一级」，
+    # stat 取「最后一级 cat」，两者分开保存、互不覆盖。
+    want_prob = []
+    for r in recs:
+        path = r.get("path") or []
+        prob = None
+        cl_type = ""
+        cats = []
+        for item in path:
+            if item[0] != "cat" or len(item) < 2:
+                continue
+            lab = str(item[1] or "")
+            cats.append(lab)
+            if len(item) >= 3 and item[2] is not None and _num_eq(item[2], p):
+                prob = item[2]
+            low = lab.lower()
+            if "置信限度" in lab or "confidence" in low or "置信区间" in lab:
+                cl_type = lab
+        if prob is None or not cats:
             continue
-        nums = [c.get("number") for c in (row.get("cells") or [])
-                if c.get("number") is not None]
+        if "log(" in cl_type.lower():
+            continue  # 跳过 log(dose) 分支：量级不同，不是 LC50
+        nums = r.get("numbers") or []
         if not nums:
             continue
+        want_prob.append({"stat": cats[-1], "number": nums[0], "cl_type": cl_type})
+
+    if want_prob:
+        got = {"lower": None, "point": None, "upper": None}
+        for item in want_prob:
+            kind = _classify(item["stat"])
+            if kind in got and got[kind] is None:
+                got[kind] = item["number"]
+        if all(v is not None for v in got.values()):
+            return {
+                "table": target.get("title"),
+                "subType": target.get("subType"),
+                "probability": p,
+                "point": got["point"],
+                "lower": got["lower"],
+                "upper": got["upper"],
+                "cl_type": want_prob[0]["cl_type"],
+                "source": "records",
+            }
+
+    # ---- 兜底：老结构（平铺 rows）
+    col_labels = []
+    for h in target.get("headers") or []:
+        if (h.get("position") or "").lower() == "column":
+            col_labels.extend(h.get("categories") or [])
+
+    for row in target.get("rows") or []:
+        nums_of_cats = _cat_numbers(row)
+        hit = any(_num_eq(v, p) for v in nums_of_cats)
+        if not hit:
+            labels = row.get("labels") or []
+            hit = any(_num_eq(str(x).strip(), p) for x in labels)
+        if not hit:
+            continue
+
+        cells = [c for c in (row.get("cells") or []) if c.get("number") is not None]
+        if not cells:
+            continue
+
+        point = lower = upper = None
+        for i, cell in enumerate(cells):
+            kind = _classify(col_labels[i]) if i < len(col_labels) else "unknown"
+            if kind == "lower" and lower is None:
+                lower = cell["number"]
+            elif kind == "upper" and upper is None:
+                upper = cell["number"]
+            elif kind == "point" and point is None:
+                point = cell["number"]
+
+        if point is None or lower is None or upper is None:
+            # 兜底：按数值大小推断（lower ≤ point ≤ upper），比按顺序瞎赋可靠
+            try:
+                vals = sorted(float(c["number"]) for c in cells[:3])
+                if len(vals) >= 3:
+                    lower = lower or f"{vals[0]:g}"
+                    point = point or f"{vals[1]:g}"
+                    upper = upper or f"{vals[2]:g}"
+            except (TypeError, ValueError):
+                pass
+        # 仍然缺就用原始顺序补齐（最后一层兜底，并在字段里标注）
+        nums = [c["number"] for c in cells]
+        if point is None:
+            point = nums[1] if len(nums) > 1 else nums[0]
+        if lower is None:
+            lower = nums[0]
+        if upper is None:
+            upper = nums[2] if len(nums) > 2 else nums[-1]
+
         return {
             "table": target.get("title"),
             "subType": target.get("subType"),
             "probability": p,
-            "point": nums[0] if len(nums) > 0 else None,
-            "lower": nums[1] if len(nums) > 1 else None,
-            "upper": nums[2] if len(nums) > 2 else None,
+            "point": point,
+            "lower": lower,
+            "upper": upper,
+            "column_labels": col_labels,
             "all_numbers": nums,
         }
     return None
@@ -368,10 +688,13 @@ def main() -> int:
     if args.table:
         picked = [t for t in tables if _matches(t, args.table)]
         if not picked:
-            print(f"! 没有标题含「{args.table}」的表。可用 --list 看有哪些。", file=sys.stderr)
+            print(f"! 没有标题或 subType 含「{args.table}」的表。可用 --list 看有哪些。",
+                  file=sys.stderr)
             return 2
         selected = picked[0]
-        print(f"选中：{selected.get('title')}", file=sys.stderr)
+        print(f"选中：{selected.get('title')}"
+              + (f"（subType={selected.get('subType')}）" if selected.get("subType") else ""),
+              file=sys.stderr)
     else:
         selected = None
 
@@ -407,7 +730,10 @@ def main() -> int:
             return 2
         for h in hits:
             print(f"{h.get('row')} | {h.get('col')} | number={h.get('number')} | text={h.get('text')}")
-        return 0
+        # --find 与 --tsv/--json 可以同时用：先打印命中，再照常写文件。
+        # 早先这里直接 return 0，导致 combo 时文件静默不写，用户以为写成功了。
+        if not args.tsv and not args.json_out:
+            return 0
 
     if args.tsv:
         write_tsv(rows, args.tsv)
