@@ -69,9 +69,11 @@
 | PROBIT/LC50、MIXED、NPAR K-W、UNIANOVA | routes 已登记 |
 | OMS → OXML | `number` 全精度 vs `text` 显示值 |
 | 328 条命令清单 | `syntax_xml/*.xml` |
-| **未覆盖** | `outputFormat` 的 10 种非 text 值、`imageFormat`、`symbol` 传参、`locale` |
+| **❌ 写反的一条** | docs 硬约束 4「**PROBIT 的结果不进 OXML**」—— **实测为假**，LC50 与 CI 就在 `Confidence Limits` 表里（§3.3） |
+| **未覆盖** | `outputFormat` 的 10 种非 text 值、`imageFormat`、`symbol` 传参、`locale`、**OXML pivotTable → tidy 的通用解析器** |
 
-**结论：两个 mod 的「单次调用」已经很完整。缺口在「批量」「非 OXML 输出」「开放格式直读」三条线上。**
+**结论**：两个 mod 的「单次调用」已经很完整，但 **spss 的 PROBIT 约束写错了、prism 的模板供应链被低估了**。
+真正的缺口在「OXML 通用解析」「模板自动生成」两条线上，而不是「再多几个统计命令」。
 
 ---
 
@@ -157,7 +159,7 @@
 
 ### 3.2 SPSS
 
-#### (a) `.spj` 输出格式远不止 `text-utf8` —— **最高价值**
+#### (a) `.spj` 输出格式远不止 `text-utf8`
 
 `D:\app\spss\production-1.4.xsd` 枚举【实测，正则抽取】：
 
@@ -244,6 +246,8 @@ OXML 里的 pivotTable（UTF-8 解码后）：
 | `.pzc` 编码 | 按 **GBK(936)** 写盘，ASCII 路径；与现有 docs 一致 |
 | 后台残留 | 曾见 `BDY-Prism10-Win64-OFFLINE` 进程，`taskkill` 后消失；**下次跑前应一并清** |
 
+### 3.6 SPSS 其余接口（承接 3.2）
+
 #### (b) `symbol` 传参：`.spj` 可参数化【实测 XSD 有，未验证运行时】
 
 XSD 有 `<xs:element name="symbol">`，属性 `name`（必填）、`quote`（必填）、`default`、`prompt`。
@@ -322,12 +326,14 @@ XSD 有 `<xs:element name="symbol">`，属性 `name`（必填）、`quote`（必
 
 ## 6. 下一步：每个 mod 的第一步验证命令
 
-### `prism-pzfx` —— 已完成大半（8/8 解析），剩「写回」未验
+> 状态已是**第二版之后**：下面标「✅ 已完成」的不要再重复验证，直接进建 mod 阶段。
+
+### `prism-pzfx` + `prism-template` —— ✅ 只读与「改包写回」都已完成
+
 ```powershell
-# 已实测（本报告完成）：
-#   python -c "import xml.etree.ElementTree as ET; ..."  8/8 成功
-# 待验 1：命名空间归一化后是否能覆盖全部变体
-# 待验 2：round-trip —— 读出来 → 原样写回 → prism.exe 能否打开
+# ✅ 已完成：8/8 命名空间归一化解析
+# ✅ 已完成：改 .prism 内层 data.csv → Prism 3.9 s 正常打开并导出（rc=0）
+# 仅剩未验：「改坏结构」的失败形态（Prism 会报错还是静默丢表）
 $code = @'
 import xml.etree.ElementTree as ET
 NS = "{http://graphpad.com/prism/Prism.htm}"
@@ -346,31 +352,48 @@ for tb in r.findall(ns+"Table"):
 '@
 $code | Out-File -Encoding utf8 "$env:TEMP\pzfx_v.py"; & python "$env:TEMP\pzfx_v.py"
 ```
-**判定**：数值与 Prism 界面显示一致 = 只读解析可用。**写回未验证，别急着做写能力。**
 
-### `spss-prod` —— 三件独立的事，逐个验
+模板供应链（✅ 已验证可跑，可直接抄进 `prism-template` 模板）：
+```powershell
+# ① 任意 .pzfx → .prism（5.8 s）
+"Open C:\tmp\sfprism\in.pzfx`r`nSave C:\tmp\sfprism\out.prism`r`nExit`r`n" |
+  Set-Content -Encoding Default -NoNewline C:\tmp\sfprism\job.pzc   # Default=GBK，勿用 UTF8
+& 'D:\app\prism\prism.exe' '@C:\tmp\sfprism\job.pzc'
+
+# ② 换数据：直接改 zip 内 data/tables/<uid>/data.csv（保持列数 = 表列数，行尾留空行）
+# ③ 重算 + 取数：Open 改后的 .prism → RecalcAll → Exit，再解包读 results.json
+```
+
+### `spss-ooxml-reader` —— ✅ LC50 落库已跑通，剩下是泛化
+
+```powershell
+# ✅ 已完成：PROBIT → OXML → 解析 Confidence Limits，得 LC50=0.1020 / CI[0.0351,0.1863]
+# 待做（建 mod 的工作量，不是验证）：把 pivotTable(dimension 嵌套) → tidy 表，
+#   按 subType 分派：Confidence Limits / ChiSquareTests / Parameter Estimates / Cell Counts and Residuals
+```
+
+### `spss-prod` —— 仍是三件**未验证**的事，逐个验
 ```powershell
 # 前提：workdir 纯 ASCII，.spj 里 <output> 必须在 <syntax syntaxPath="..."/> 之前
-# 步骤 1：只改 outputFormat，验证 html 能否带出 PROBIT 的 LC50
+# 注意：LC50 走 OXML 已够，下面步骤 1 只是确认 html 是否额外提供渲染版
+# 步骤 1：【未验证】outputFormat=html
 #   <output outputPath="C:/tmp/sp/out.html" outputFormat="html"/>
-#   <syntax syntaxPath="C:/tmp/sp/probit.sps"/>
-#   probit.sps:  PROBIT deaths OF total WITH dose /MODEL=PROBIT /PRINT=CI.
 & 'D:\app\spss\stats.exe' -production silent 'C:\tmp\sp\job.spj'
 Select-String -Path 'C:\tmp\sp\out.html' -Pattern 'LC50|95%|Confidence' | Select-Object -First 5
 
-# 步骤 2：imageFormat（先出一条图再验）
+# 步骤 2：【未验证】imageFormat（先出一条图再验）
 #   <output ... outputFormat="html" imageFormat="png"/>
-# 步骤 3：symbol 传参
+# 步骤 3：【未验证】symbol 传参
 #   <symbol name="DATA" quote="true" default="C:/tmp/sp/data.csv"/>
 #   语法里 GET DATA /FILE=!DATA
-# 每步之后确认无残留进程
+# 每步之后确认无残留进程（实测会自行退出，但强杀兜底仍要留）
 Get-Process stats -ErrorAction SilentlyContinue
 ```
-**判定**：HTML 里 grep 到 LC50 与置信区间 = 这条路线成立，可把「PROBIT 只能解析日志」降级为「OXML 不行，HTML 可以」。
+**判定**：HTML 里 grep 到 LC50 与置信区间 → 只是拿到「多一种输出形态」，**不再是解锁 LC50 的前提**。
 
 ---
 
-### 7. 本机实测记录（可复现）
+## 7. 本机实测记录（可复现）
 
 | 探测 | 命令要点 | 结果 | 等级 |
 |---|---|---|---|
