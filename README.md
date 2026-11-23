@@ -22,10 +22,10 @@ python scripts/mod.py update --check            # 之后随时查上游更新
 |---|---|
 | 绘图风格 | `ggpubfigs`（色盲色板 + 期刊主题）、`icarus-figures`（paperfig，约 50 个图型）、`sci-figure`（8 个脚本骨架 + QA 清单） |
 | 配色 | `paletteer`（2545 个色板）、`khroma`（科学色板 + 色盲模拟）、`colorcet`（感知均匀色图）、`palettable`（ColorBrewer） |
-| 统计 | `pydeseq2`（bulk DE）、`limma`（线性模型）、`clusterprofiler`（GO/KEGG）、`wgcna`（共表达网络）、`drc`（剂量反应）、`ssdtools`（SSD/HC5/PNEC）、`mixture-tox`（CA/IA + TU） |
+| 统计 | `pydeseq2`（bulk DE）、`limma`（线性模型）、`clusterprofiler`（GO/KEGG）、`wgcna`（共表达网络）、`drc`（剂量反应）、`growthcurver`（生长曲线 r/代时/AUC）、`ssdtools`（SSD/HC5/PNEC）、`mixture-tox`（CA/IA + TU） |
 | 软件桥 | `prism`（只做统计，读 results.json）、`spss`（生产作业 / 进程内 Python） |
 | 网络毒理 | `network-tox`（STRING PPI + hub 基因） |
-| 方法与模板 | `enrichment-gseapy`（离线 ORA/GSEA + 结果契约） |
+| 方法与模板 | `enrichment-gseapy`（离线 ORA/GSEA + 结果契约）、`grobid-bridge`（PDF→书目元数据，需外部 GROBID 服务，草稿） |
 
 ## 一个 mod 长什么样
 
