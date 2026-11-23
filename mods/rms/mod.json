@@ -1,0 +1,63 @@
+{
+  "schema": 1,
+  "id": "rms",
+  "name": "rms",
+  "summary": "临床预测模型可视化：nomogram（列线图，含生存概率刻度）+ 校准曲线（calibration）+ 系数/HR 表，rms 包的标准产出",
+  "type": "rpkg",
+  "env": "r",
+  "purpose": "analysis",
+  "source": {
+    "kind": "cran",
+    "url": "https://cran.r-project.org/package=rms",
+    "owner": null,
+    "repo": null,
+    "default_branch": null,
+    "ref": "CRAN 当前版本",
+    "sha": null,
+    "subdir": null
+  },
+  "install": {
+    "pkg": "rms",
+    "import_name": "rms"
+  },
+  "routes": [
+    {
+      "intent": "列线图 / nomogram / 临床预测评分工具（把多因素模型变成打分表）",
+      "backend": "rms::cph / lrm + nomogram()（配 Survival(f) 映射生存概率）",
+      "purpose": "plot",
+      "why": "nomogram 是临床预测模型的标准可视化，rms 是唯一成熟实现；本机 cnsplots/ggplot2 都没有",
+      "fallback": "手工把回归系数换算成评分表（易错）"
+    },
+    {
+      "intent": "校准曲线 / calibration plot / 模型预测概率准不准",
+      "backend": "rms::calibrate(model, u=, method='boot')",
+      "purpose": "plot",
+      "why": "判断模型是否过拟合/校准良好，nomogram 的必要配套",
+      "fallback": "分箱后手算观测 vs 预测"
+    },
+    {
+      "intent": "Cox / logistic 回归的系数、HR/OR 与置信区间表",
+      "backend": "rms::cph / lrm + summary()",
+      "purpose": "analysis",
+      "why": "rms 的模型对象自带规范化系数表，可直接导出",
+      "fallback": "survival::coxph + broom"
+    }
+  ],
+  "license": "GPL (>= 2)",
+  "docs": "docs.md",
+  "templates": [
+    "templates/nomogram.R"
+  ],
+  "requires_review": false,
+  "detection": {
+    "confidence": "high",
+    "evidence": "CRAN rms 8.2-1（install.packages 实测装成功，连带 polspline/tinytable）；用 survival::lung 实跑 cph→nomogram(生存概率)→calibrate(u=180,B=30) 全部通过",
+    "notes": [
+      "用 rms 前必须先 datadist(data) 并 options(datadist='dd')，否则 nomogram/calibrate 报错。",
+      "生存概率 nomogram 用 Survival(f) 把线性预测子映射成概率：fun=list(function(x) sf(u, x))。",
+      "Surv 的 status 支持 1=删失/2=死亡（1/2 编码），也支持 0/1；模板按 0=删失/1=事件说明。",
+      "依赖纯 R + CRAN 二进制，Windows 无需编译器。"
+    ],
+    "paths_seen": 0
+  }
+}

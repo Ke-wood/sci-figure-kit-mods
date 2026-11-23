@@ -1,0 +1,62 @@
+{
+  "schema": 1,
+  "id": "maftools",
+  "name": "maftools",
+  "summary": "突变景观分析：读 MAF，出 oncoplot/co-oncoplot（突变瀑布）、lollipop（蛋白域突变）、rainfall、TiTv 与突变负荷，肿瘤/基因组方向专用",
+  "type": "rpkg",
+  "env": "r",
+  "purpose": "analysis",
+  "source": {
+    "kind": "bioc",
+    "url": "https://bioconductor.org/packages/maftools/",
+    "owner": null,
+    "repo": null,
+    "default_branch": null,
+    "ref": "Bioconductor 3.23",
+    "sha": null,
+    "subdir": null
+  },
+  "install": {
+    "pkg": "maftools",
+    "import_name": "maftools"
+  },
+  "routes": [
+    {
+      "intent": "突变景观 / oncoplot / 突变瀑布图 / 各样本基因突变矩阵",
+      "backend": "maftools::read.maf + oncoplot / coOncoplot",
+      "purpose": "both",
+      "why": "MAF 专用工具，oncoplot 是突变瀑布图的事实标准；ComplexHeatmap 的 oncoPrint 只管画矩阵，不解析 MAF、无突变类型/临床注释",
+      "fallback": "ComplexHeatmap::oncoPrint（需自己把 MAF 整理成矩阵）"
+    },
+    {
+      "intent": "突变负荷 / TiTv / 共突变 / 突变谱（signature 概览）",
+      "backend": "maftools::titv / mafSummary / trinucleotideMatrix",
+      "purpose": "analysis",
+      "why": "一套 MAF 进去，负荷、转换颠换、突变谱一次出",
+      "fallback": "手写统计"
+    },
+    {
+      "intent": "蛋白结构域上的突变 lollipop 图 / 特定基因突变分布",
+      "backend": "maftools::lollipopPlot",
+      "purpose": "plot",
+      "why": "把突变标在蛋白域上，肿瘤驱动基因常用图",
+      "fallback": "无（需蛋白域注释，手绘代价高）"
+    }
+  ],
+  "license": "MIT + file LICENSE",
+  "docs": "docs.md",
+  "templates": [
+    "templates/oncoplot.R"
+  ],
+  "requires_review": false,
+  "detection": {
+    "confidence": "high",
+    "evidence": "Bioconductor 3.23 maftools 2.28.0（BiocManager 实测装成功，连带 pheatmap/DNAcopy/Rhtslib 二进制）；用 maftools 自带 tcga_laml.maf.gz 实跑 oncoplot 与 gene summary",
+    "notes": [
+      "输入必须是 MAF 格式（Mutation Annotation Format）；VCF 需先转 MAF（maftools::vcf2maf 或 maftools 的 convert）。",
+      "oncoplot 基因太多会糊，模板默认 top=20，按需调。",
+      "纯 R + Bioc 二进制，Windows 无需编译器。"
+    ],
+    "paths_seen": 0
+  }
+}

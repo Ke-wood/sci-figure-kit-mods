@@ -1,0 +1,63 @@
+{
+  "schema": 1,
+  "id": "shap",
+  "name": "SHAP",
+  "summary": "模型可解释性：用 SHAP 值解释任意黑盒模型（summary/beeswarm/bar/waterfall/dependence），给特征重要性与单样本归因",
+  "type": "pypkg",
+  "env": "figkit",
+  "purpose": "analysis",
+  "source": {
+    "kind": "github",
+    "url": "https://github.com/shap/shap",
+    "owner": "shap",
+    "repo": "shap",
+    "default_branch": "master",
+    "ref": "0.54.1",
+    "sha": null,
+    "subdir": null
+  },
+  "install": {
+    "spec": "shap>=0.54.0",
+    "dist": "shap",
+    "import_name": "shap"
+  },
+  "routes": [
+    {
+      "intent": "解释模型预测 / 特征重要性 / 哪个变量贡献最大（SHAP 值）",
+      "backend": "shap.TreeExplainer / Explainer + shap.plots.*",
+      "purpose": "analysis",
+      "why": "SHAP 是模型可解释性的主流标准，summary/beeswarm 给全局重要性，waterfall 给单样本归因；本机依赖（numpy/scipy/sklearn/pandas）已齐，装它只多 shap+slicer 两个纯 Python 包",
+      "fallback": "sklearn permutation_importance / 系数大小（线性模型）"
+    },
+    {
+      "intent": "单个样本为什么被判成这个结果 / 归因瀑布图",
+      "backend": "shap.plots.waterfall(explainer(X)[i])",
+      "purpose": "analysis",
+      "why": "逐特征把预测从基准值推到最终值，最直观的单样本解释",
+      "fallback": "手工列特征贡献表"
+    },
+    {
+      "intent": "某特征的依赖/交互效应曲线",
+      "backend": "shap.plots.scatter(explanation[:, 'feature'])",
+      "purpose": "analysis",
+      "why": "依赖图揭示非线性与交互，比单看重要性更细",
+      "fallback": "部分依赖 PDP（sklearn PartialDependenceDisplay）"
+    }
+  ],
+  "license": "MIT",
+  "docs": "docs.md",
+  "templates": [
+    "templates/shap_explain.py"
+  ],
+  "requires_review": false,
+  "detection": {
+    "confidence": "high",
+    "evidence": "PyPI shap 0.54.1（pip 实测安装成功）；pip --dry-run 显示 numpy 2.4.6/scipy 1.18.1/scikit-learn 1.9.1/pandas 2.3.3 全部已满足，只新增 shap+slicer，不动核心依赖；demo 在 figkit py3.14 实跑出图",
+    "notes": [
+      "本机 figkit 已装 numpy 2.4.6、scikit-learn、matplotlib 3.10.8，安装零冲突。",
+      "分类模型：explainer(X) 对二分类返回 3 维 values，取正类切片 explanation[:, :, 1] 再画。",
+      "纯分析库，不出图也可：shap 值导出 CSV 交给下游。"
+    ],
+    "paths_seen": 0
+  }
+}
