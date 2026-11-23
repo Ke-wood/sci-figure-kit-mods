@@ -1,0 +1,55 @@
+{
+  "schema": 1,
+  "id": "growthcurver",
+  "name": "growthcurver",
+  "summary": "生长曲线拟合：logistic 及 Gompertz 变体，输出生长速率 r、代时 t_gen、AUC，适配胁迫/营养限制实验的生长表型分析",
+  "type": "rpkg",
+  "env": "r",
+  "purpose": "analysis",
+  "source": {
+    "kind": "cran",
+    "url": "https://cran.r-project.org/package=growthcurver",
+    "owner": null,
+    "repo": null,
+    "default_branch": null,
+    "ref": "CRAN 当前版本",
+    "sha": null,
+    "subdir": null
+  },
+  "install": {
+    "pkg": "growthcurver",
+    "import_name": "growthcurver"
+  },
+  "routes": [
+    {
+      "intent": "胁迫/营养限制下的生长曲线拟合（生长速率、代时、AUC）",
+      "backend": "growthcurver::SummarizeGrowth() + ggplot2 出图",
+      "purpose": "analysis",
+      "why": "R 标准生长曲线工具，一次给出 r / t_gen / auc_l，覆盖 drc 之外的「生长表型」维度",
+      "fallback": "Python scipy.optimize.curve_fit 自拟合 logistic（需自算代时与 AUC）"
+    },
+    {
+      "intent": "多孔板/多样本批量拟合与组间比较",
+      "backend": "growthcurver::SummarizeGrowthByPlate() 汇总表 + 统计检验",
+      "purpose": "analysis",
+      "why": "按整块板/多样本批量返回参数汇总，便于处理组间比较",
+      "fallback": "逐样本 SummarizeGrowth 后 rbind 汇总"
+    }
+  ],
+  "license": "GPL (>= 2)",
+  "docs": "docs.md",
+  "templates": [
+    "templates/growth_curve.R"
+  ],
+  "requires_review": false,
+  "detection": {
+    "confidence": "manual",
+    "evidence": "CRAN 在册 growthcurver 0.3.1，License GPL (>= 2)，Depends R (>= 4.0)，Imports minpack.lm (>= 1.2)（CRAN available.packages 实测）；上游源码仓库 sprouffske/growthcurver 停更于 2021-12，以 CRAN 版本为维护入口",
+    "notes": [
+      "输入：时间向量 + 响应向量（OD600/生物量），长表，多样本用 SummarizeGrowthByPlate。",
+      "与 drc 互补：drc 管剂量-抑制（EC50），growthcurver 管生长速率与代时。",
+      "模型：默认 logistic；也支持 Gompertz（gcfit(model='gompertz')）。"
+    ],
+    "paths_seen": 0
+  }
+}

@@ -1,0 +1,55 @@
+{
+  "schema": 1,
+  "id": "grobid-bridge",
+  "name": "grobid 文献结构化桥",
+  "summary": "调用 GROBID 服务，从学术 PDF 提取标题/作者/参考文献/正文结构化元数据，补齐文献语料的书目与正文缺口",
+  "type": "pypkg",
+  "env": "figkit",
+  "purpose": "analysis",
+  "source": {
+    "kind": "github",
+    "url": "https://github.com/grobidOrg/grobid-client-python",
+    "owner": "grobidOrg",
+    "repo": "grobid-client-python",
+    "default_branch": "master",
+    "ref": "0.2.2",
+    "sha": null,
+    "subdir": null
+  },
+  "install": {
+    "spec": "grobid-client-python>=0.2.2",
+    "import_name": "grobid_client"
+  },
+  "routes": [
+    {
+      "intent": "从 PDF 提取篇名/作者/DOI/参考文献（补书目元数据）",
+      "backend": "GrobidClient(grobid_server=...).process_pdf('processFulltextDocument', pdf)",
+      "purpose": "analysis",
+      "why": "直接解决「只有目录、无正文且缺书目元数据」的缺口，产出结构化 TSV 落盘",
+      "fallback": "pdftotext + 正则（质量低，仅应急）"
+    },
+    {
+      "intent": "批量处理文献语料目录，产出语料表",
+      "backend": "GrobidClient.process_paths('processFulltextDocument', in_dir, out_dir) 或 CLI grobid_client",
+      "purpose": "analysis",
+      "why": "整目录并发处理 PDF，汇总成篇名/DOI/主题表",
+      "fallback": "手工逐篇处理"
+    }
+  ],
+  "license": "Apache-2.0",
+  "docs": "docs.md",
+  "templates": [
+    "templates/extract_corpus.py"
+  ],
+  "requires_review": true,
+  "detection": {
+    "confidence": "manual",
+    "evidence": "PyPI grobid-client-python 0.2.2（pip index 实测），Apache-2.0，417 stars；import 名 grobid_client（wheel top_level 实测）；依赖外部 GROBID Java 服务",
+    "notes": [
+      "requires_review=true：依赖外部 GROBID 服务（Java + 模型权重），本机未部署时不得安装。",
+      "建议服务用官方容器（lfoppiano/grobid），不装入 sci-figure 本机隔离环境。",
+      "服务不可用时 graceful 降级到 pdftotext 方案。"
+    ],
+    "paths_seen": 0
+  }
+}
